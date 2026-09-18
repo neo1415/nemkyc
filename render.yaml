@@ -1,3 +1,6 @@
+# Render Blueprint for the NEM Forms backend (apps/backend inside this monorepo).
+# Secrets are `sync: false` and are entered once in the Render dashboard; everything else is
+# declared here so a fresh service comes up identical to the current one.
 services:
   - type: web
     name: nem-server-rhdb
@@ -10,19 +13,92 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: FRONTEND_URL
+        value: https://nemforms.com
+      - key: APP_URL
+        value: https://nemforms.com
+      - key: COOKIE_DOMAIN
+        value: .nemforms.com
+      - key: ADDITIONAL_ALLOWED_ORIGINS
+        value: https://nem-customer-feedback-8d3fb.web.app,https://nem-customer-feedback-8d3fb.firebaseapp.com
+      # ---- Firebase Admin (service account, split fields) ----
+      - key: TYPE
+        value: service_account
+      - key: PROJECT_ID
+        value: nem-customer-feedback-8d3fb
+      - key: PRIVATE_KEY_ID
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: CLIENT_EMAIL
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: AUTH_URI
+        value: https://accounts.google.com/o/oauth2/auth
+      - key: TOKEN_URI
+        value: https://oauth2.googleapis.com/token
+      - key: AUTH_PROVIDER_X509_CERT_URL
+        value: https://www.googleapis.com/oauth2/v1/certs
+      - key: CLIENT_X509_CERT_URL
+        sync: false
+      - key: UNIVERSE_DOMAIN
+        value: googleapis.com
+      - key: FIREBASE_DATABASE_URL
+        value: https://nem-customer-feedback-8d3fb.firebaseio.com
+      - key: FIREBASE_STORAGE_BUCKET
+        value: nem-customer-feedback-8d3fb.appspot.com
+      - key: REACT_APP_FIREBASE_KEY
+        value: AIzaSyDTyrzbQ4xYV0IAvngwgCUBf6EPnflacSw
+      - key: REACT_APP_AUTH_DOMAIN
+        value: nem-customer-feedback-8d3fb.firebaseapp.com
+      # ---- Security ----
       - key: CSRF_SECRET
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
-      - key: FIREBASE_SERVICE_ACCOUNT
+      - key: EVENTS_IP_SALT
         sync: false
+      - key: SERVER_API_KEY
+        sync: false
+      - key: ENABLE_EVENTS_LOGGING
+        value: "true"
+      - key: ENABLE_IP_GEOLOCATION
+        value: "false"
+      - key: RAW_IP_RETENTION_DAYS
+        value: "30"
+      # ---- Email (Office 365) ----
+      - key: EMAIL_HOST
+        value: smtp.office365.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_SECURE
+        value: "false"
       - key: EMAIL_USER
-        sync: false
+        value: kyc@nem-insurance.com
       - key: EMAIL_PASS
+        sync: false
+      # ---- Verification providers ----
+      - key: VERIFICATION_MODE
+        value: production
+      - key: DATAPRO_API_URL
+        value: https://api.datapronigeria.com
+      - key: DATAPRO_SERVICE_ID
+        sync: false
+      - key: VERIFYDATA_API_URL
+        value: https://vd.villextra.com
+      - key: VERIFYDATA_SECRET_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: DATAPRO_SERVICE_ID
-        sync: false
-      - key: VERIFYDATA_SECRET_KEY
-        sync: false
+      # ---- Google Document AI (secret file uploaded in the dashboard at this path) ----
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/google-cloud-credentials.json
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        value: nem-salvage
+      - key: DOCUMENT_AI_LOCATION
+        value: us
+      - key: DOCUMENT_AI_PROCESSOR_ID
+        value: 5c39926b56cbb9f0

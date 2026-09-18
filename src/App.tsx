@@ -1,6 +1,7 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { GuestIdentityProvider } from './contexts/GuestIdentityContext';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from './components/ui/sonner';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -39,6 +40,7 @@ const InactivityHandler: React.FC<{ children: React.ReactNode }> = ({ children }
 const AdminDashboard = lazy(() => import('./pages/dashboard/AdminDashboard'));
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 const FormViewer = lazy(() => import('./pages/admin/FormViewer'));
+const ClaimsQueue = lazy(() => import('./pages/admin/ClaimsQueue'));
 const UserFormViewer = lazy(() => import('./pages/dashboard/UserFormViewer'));
 const EventsLogPage = lazy(() => import('./pages/admin/EventsLogPage'));
 const CorporateCDDViewer = lazy(() => import('./pages/admin/CorporateCDDViewer'));
@@ -209,6 +211,7 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <GuestIdentityProvider>
         <InactivityHandler>
           <Router>
             <Suspense fallback={<PageLoader />}>
@@ -326,6 +329,12 @@ function App() {
            <Route path="admin/profile" element={
              <RoleProtectedRoute allowedRoles={['admin', 'claims', 'compliance', 'super admin']}>
                <AdminProfile />
+             </RoleProtectedRoute>
+           } />
+
+           <Route path="admin/claims-queue" element={
+             <RoleProtectedRoute allowedRoles={['admin', 'claims', 'super admin']}>
+               <ClaimsQueue />
              </RoleProtectedRoute>
            } />
           
@@ -735,6 +744,7 @@ function App() {
           <SonnerToaster richColors closeButton />
         </Router>
         </InactivityHandler>
+        </GuestIdentityProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

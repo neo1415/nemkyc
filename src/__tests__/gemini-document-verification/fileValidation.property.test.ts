@@ -16,7 +16,6 @@ import { DocumentValidator } from '../../utils/geminiDocumentValidation';
 import { PROCESSING_LIMITS, SUPPORTED_FILE_TYPES } from '../../config/geminiDocumentVerification';
 
 // Mock dependencies
-vi.mock('../../services/geminiOCREngine');
 vi.mock('../../services/verificationMatcher');
 vi.mock('../../services/geminiAuditLogger');
 

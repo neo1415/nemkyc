@@ -47,11 +47,9 @@ export const REQUEST_CONFIG = {
 } as const;
 
 // File Upload Configuration
-export const FILE_UPLOAD = {
-  MAX_SIZE: 3 * 1024 * 1024, // 3MB
-  ALLOWED_TYPES: ['.jpg', '.jpeg', '.png', '.pdf'],
-  ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
-} as const;
+// The single source of truth lives in ./filePolicy.ts; this re-export keeps the
+// historical import path working.
+export { FILE_UPLOAD } from './filePolicy';
 
 // Form Configuration
 export const FORM_CONFIG = {

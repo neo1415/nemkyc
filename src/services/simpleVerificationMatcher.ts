@@ -43,11 +43,29 @@ export class SimpleVerificationMatcher {
       }
 
       // Extract names from document - use pre-parsed names from backend
+      // Prefer the labelled fields; fall back to splitting the full name the way the form side does.
+      const extractedFullName = String(extractedData.fullName || '').trim().split(/\s+/).filter(Boolean);
       const extractedNames = {
-        firstName: extractedData.firstName || '',
-        middleName: extractedData.middleName || '',
-        lastName: extractedData.lastName || ''
+        firstName: extractedData.firstName || (extractedFullName.length > 1 ? extractedFullName[0] : '') || '',
+        middleName: extractedData.middleName || (extractedFullName.length > 2 ? extractedFullName.slice(1, -1).join(' ') : '') || '',
+        lastName: extractedData.lastName || (extractedFullName.length > 1 ? extractedFullName[extractedFullName.length - 1] : '') || ''
       };
+
+      // A document whose name we could not read must never count as a match. It is inconclusive:
+      // no mismatch is reported (nothing contradicts the form), so the customer is not blocked,
+      // but the submission is flagged for manual review instead of being marked verified.
+      if (!extractedNames.firstName && !extractedNames.lastName) {
+        console.warn('⚠️ NIN document verification inconclusive: no name could be read from the document');
+        return {
+          success: true,
+          isMatch: false,
+          confidence: 0,
+          mismatches: [],
+          officialData: extractedData,
+          processingTime: 0,
+          error: 'We could not read the name on this document. It will be checked manually.'
+        };
+      }
       
       const suppliedFullName = String(formData.fullName || '').trim().split(/\s+/);
       const formNames = {

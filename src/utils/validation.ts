@@ -1020,9 +1020,10 @@ export function validateFromDate(fromDate: string): ValidationResult {
 }
 
 /**
- * Validates "to" date in date ranges
- * Rejects: past dates
- * Accepts: today or future dates
+ * Validates "to" date in date ranges (period of cover, etc.).
+ * A cover period that has already ended is legitimate: claims are frequently
+ * reported after the policy expired, so past dates are accepted.
+ * Rejects: empty or unparseable dates.
  */
 export function validateToDate(toDate: string): ValidationResult {
   if (!toDate) {
@@ -1033,17 +1034,13 @@ export function validateToDate(toDate: string): ValidationResult {
   }
 
   const date = new Date(toDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Reset time for date-only comparison
-  date.setHours(0, 0, 0, 0);
-  
-  if (date < today) {
+  if (Number.isNaN(date.getTime())) {
     return {
       isValid: false,
-      error: 'End date cannot be in the past'
+      error: 'Enter a valid end date'
     };
   }
-  
+
   return { isValid: true };
 }
 

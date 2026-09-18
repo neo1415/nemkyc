@@ -401,7 +401,7 @@ function getCacheStats() {
 }
 
 // Set up periodic cache cleanup (every 5 minutes)
-setInterval(cleanupCache, 5 * 60 * 1000);
+setInterval(cleanupCache, 5 * 60 * 1000).unref();
 
 module.exports = {
   checkDuplicate,

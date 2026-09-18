@@ -1,9 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
+import { useGuestIdentity } from '@/contexts/GuestIdentityContext';
+import type { GuestIdentity } from '@/components/auth/GuestIdentityDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { matchCACData, matchNINData, normalizeNINVerificationData } from '../utils/verificationMatcher';
 import { getCSRFToken } from '../utils/csrfToken';
+import {
+  describeReattachFields,
+  mergePendingFormData,
+  readPendingFileFields,
+  stripFilesFromPayload,
+} from '../utils/pendingSubmission';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -180,13 +188,23 @@ const persistPendingSubmission = (
   formType: string,
   resumeState: PendingSubmissionState = 'ready',
 ) => {
+  // Raw File/Blob values cannot survive JSON; strip them and remember which
+  // fields need to be attached again when the submission resumes.
+  const { formData: serialisableFormData, pendingFileFields } = stripFilesFromPayload(formData);
   sessionStorage.setItem('pendingSubmission', JSON.stringify({
-    formData,
+    formData: serialisableFormData,
+    pendingFileFields,
     formType,
     timestamp: Date.now(),
     resumeState,
   }));
 };
+
+/** Product wording for a form's document fields, used in the re-attach prompt. */
+const documentLabelsFor = (formType: string): Record<string, string> =>
+  Object.fromEntries(
+    (VERIFIED_DOCUMENT_REQUIREMENTS[formType] || []).map(({ field, label }) => [field, label]),
+  );
 
 const markPendingSubmissionForReview = () => {
   const raw = sessionStorage.getItem('pendingSubmission');
@@ -235,6 +253,7 @@ export const useEnhancedFormSubmit = (
 ): UseEnhancedFormSubmitReturn => {
   const { formType, onSuccess, onError, customValidation, verificationData } = options;
   const { user, firebaseUser } = useAuth();
+  const { requestGuestIdentity } = useGuestIdentity();
   const navigate = useNavigate();
   
   const [isValidating, setIsValidating] = useState(false);
@@ -278,17 +297,28 @@ export const useEnhancedFormSubmit = (
       // On sign-in these two values can settle on different renders; submitting in
       // between them sends neither a reliable bearer token nor (cross-site) cookie.
       if (pendingData && user && firebaseUser) {
+        const parsedPending = JSON.parse(pendingData);
         const {
           formData: savedFormData,
           formType: savedFormType,
           timestamp,
           resumeState = 'ready',
-        } = JSON.parse(pendingData);
-        
+        } = parsedPending;
+        const pendingFileFields = readPendingFileFields(parsedPending);
+
         // Only process if it's for this form type and not expired (30 minutes)
         if (savedFormType === formType && Date.now() - timestamp < 30 * 60 * 1000) {
           if (resumeState === 'needs-review') {
             setFormData(savedFormData);
+            return;
+          }
+
+          // Documents attached before sign-in were lost in transit; ask for them
+          // again rather than submitting the form without them.
+          if (pendingFileFields.length > 0) {
+            markPendingSubmissionForReview();
+            setFormData(savedFormData);
+            toast.error(describeReattachFields(pendingFileFields, documentLabelsFor(formType)));
             return;
           }
 
@@ -490,13 +520,35 @@ export const useEnhancedFormSubmit = (
 
     try {
       const documentRequirements = VERIFIED_DOCUMENT_REQUIREMENTS[formType] || [];
+      const reviewReasons: string[] = [];
       for (const requirement of documentRequirements) {
         if (requirement.required === false && !data[requirement.field]) continue;
         const verificationStatus = data[`${requirement.field}VerificationStatus`];
         const verificationResult = data[`${requirement.field}Verification`];
-        if (verificationStatus !== 'verified' || verificationResult?.isMatch !== true) {
-          throw new Error(`Please upload and successfully verify the ${requirement.label} before reviewing your submission.`);
+        if (verificationStatus === 'verified' && verificationResult?.isMatch === true) continue;
+        if (verificationStatus === 'failed') {
+          const reasons = (verificationResult?.mismatches || [])
+            .filter((m: any) => m.isCritical)
+            .map((m: any) => m.reason)
+            .join('; ');
+          throw new Error(
+            `The ${requirement.label} does not match the details you entered${reasons ? `: ${reasons}` : ''}. Please correct the form or upload the right document.`,
+          );
         }
+        if (verificationStatus === 'uploading' || verificationStatus === 'processing') {
+          throw new Error(`We are still checking the ${requirement.label}. Please wait a moment and try again.`);
+        }
+        if (!data[requirement.field]) {
+          throw new Error(`Please upload the ${requirement.label} before reviewing your submission.`);
+        }
+        // Inconclusive, or verification never produced a result: never block the customer for our
+        // failure. Flag the submission so compliance checks the document by hand.
+        data[`${requirement.field}ReviewRequired`] = true;
+        reviewReasons.push(`${requirement.label}: automatic check ${verificationStatus === 'inconclusive' ? 'inconclusive' : 'not completed'}`);
+      }
+      if (reviewReasons.length > 0) {
+        data.reviewRequired = true;
+        data.reviewReasons = reviewReasons;
       }
 
       // Custom validation if provided
@@ -544,29 +596,79 @@ export const useEnhancedFormSubmit = (
     // Forms can be completed as a guest, but the final durable submission must
     // belong to an authenticated account. Save the already-validated payload,
     // redirect to authentication, and resume automatically on this form page.
-    if (!user || !firebaseUser) {
+    let guestIdentity: GuestIdentity | null = null;
+    if (!user) {
+      // Guests are not sent to a registration page. They give a name and email; the backend creates
+      // the account, binds the submission to it and emails a set-your-password link.
+      const choice = await requestGuestIdentity({ formLabel: formType });
+      if (!choice) {
+        isSubmittingRef.current = false;
+        return;
+      }
+      if (choice.kind === 'signed-in') {
+        // AuthContext will pick up the session shortly; the resume effect submits the saved payload.
+        persistPendingSubmission(formData, formType);
+        isSubmittingRef.current = false;
+        setShowSummary(false);
+        toast.info('Signed in. Submitting your form...');
+        return;
+      }
+      guestIdentity = choice.identity;
+    } else if (!firebaseUser) {
       persistPendingSubmission(formData, formType);
-
       isSubmittingRef.current = false;
       setShowSummary(false);
-      if (!user) {
-        navigate('/auth/signin');
-      } else {
-        setErrorMessage('Your secure sign-in is still being completed. Please wait a moment and submit again.');
-        setShowError(true);
-      }
+      setErrorMessage('Your secure sign-in is still being completed. Please wait a moment and submit again.');
+      setShowError(true);
       return;
     }
 
+    /**
+     * Posts the submission for either an authenticated user or a guest. When the backend reports
+     * that the guest email already belongs to an account, the dialog asks for that account's
+     * password; a successful sign-in defers the submission to the resume effect.
+     */
+    const postSubmission = async (payloadFormData: any): Promise<{ deferred: boolean }> => {
+      const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
+        formData: payloadFormData,
+        formType,
+        userEmail: user?.email ?? guestIdentity?.email,
+        userUid: user?.uid,
+        ...(guestIdentity ? { guest: guestIdentity } : {}),
+      }, 'POST', false, firebaseUser);
+      if (response.ok) return { deferred: false };
+
+      if (response.status === 409 && guestIdentity) {
+        const body = await response.clone().json().catch(() => null);
+        if (body?.code === 'ACCOUNT_EXISTS') {
+          const retry = await requestGuestIdentity({
+            formLabel: formType,
+            accountExists: true,
+            initialIdentity: guestIdentity,
+          });
+          if (retry?.kind === 'signed-in') {
+            persistPendingSubmission(payloadFormData, formType);
+            setShowSummary(false);
+            toast.info('Signed in. Submitting your form...');
+            return { deferred: true };
+          }
+          throw new Error('This email already has an account. Sign in to submit, or use a different email.');
+        }
+      }
+      throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
+    };
+
     // Preserve uploaded document URLs from the previous attempt while allowing
-    // corrected field values from this attempt to replace older values.
+    // corrected field values from this attempt to replace older values. Values
+    // present in the current form always win; a null placeholder left in the
+    // stored payload (a stripped File) never overwrites a re-attached document.
     let submissionFormData = formData;
     const recoverablePending = sessionStorage.getItem('pendingSubmission');
     if (recoverablePending) {
       try {
         const parsedPending = JSON.parse(recoverablePending);
         if (parsedPending.formType === formType && parsedPending.formData) {
-          submissionFormData = { ...parsedPending.formData, ...formData };
+          submissionFormData = mergePendingFormData(parsedPending.formData, formData);
         }
       } catch {
         // Malformed legacy recovery data will be replaced below.
@@ -686,15 +788,11 @@ export const useEnhancedFormSubmit = (
 
         // Now proceed with form submission
         setLoadingMessage('Submitting your form...');
-        const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
-          formData: enrichedFormData,
-          formType,
-          userEmail: user.email,
-          userUid: user.uid
-        }, 'POST', false, firebaseUser);
-
-        if (!response.ok) {
-          throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
+        const outcome = await postSubmission(enrichedFormData);
+        if (outcome.deferred) {
+          setIsSubmitting(false);
+          isSubmittingRef.current = false;
+          return;
         }
 
         setIsSubmitting(false);
@@ -720,15 +818,11 @@ export const useEnhancedFormSubmit = (
       setIsSubmitting(true);
 
       try {
-        const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
-          formData: submissionFormData,
-          formType,
-          userEmail: user.email,
-          userUid: user.uid
-        }, 'POST', false, firebaseUser);
-
-        if (!response.ok) {
-          throw new Error(await getResponseErrorMessage(response, 'We could not submit your form. Please check your details and try again.'));
+        const outcome = await postSubmission(submissionFormData);
+        if (outcome.deferred) {
+          setIsSubmitting(false);
+          isSubmittingRef.current = false;
+          return;
         }
 
         setIsSubmitting(false);

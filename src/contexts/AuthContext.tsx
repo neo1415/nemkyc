@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { API_BASE_URL } from '@/config/constants';
 import { 
   User as FirebaseUser, 
   signInWithEmailAndPassword,
@@ -107,20 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('🔍 Auth: Found user in userroles collection');
             console.log('🔍 Auth: Raw role from Firestore:', userRoleData.role);
             
-            // Auto-assign super admin role to neowalker502@gmail.com
-            let userRole = normalizeRole(userRoleData.role || 'default');
-            console.log('🔍 Auth: Normalized role:', userRole);
-            
-            if (firebaseUser.email === 'neowalker502@gmail.com' && !rolesMatch(userRole, 'super admin')) {
-              userRole = 'super admin';
-              // Update in Firestore - store as 'super admin' for firestore rules compatibility
-              await setDoc(doc(db, 'userroles', firebaseUser.uid), {
-                ...userRoleData,
-                role: 'super admin',
-                dateModified: new Date()
-              }, { merge: true });
-              console.log('🔍 Auth: Auto-assigned super admin role to neowalker502@gmail.com');
-            }
+            const userRole = normalizeRole(userRoleData.role || 'default');
             
             // CRITICAL FIX: Load mustChangePassword from 'users' collection (where backend sets it)
             let mustChangePassword = false;
@@ -828,7 +816,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔍 Logout: Clearing React Query cache');
     queryClient.clear();
     console.log('✅ Logout: React Query cache cleared');
-    
+
+    // Destroy the server-side session (cookie and any Bearer fallback copy) before the Firebase sign-out.
+    const storedSession = localStorage.getItem('__session');
+    try {
+      await fetch(`${API_BASE_URL}/api/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedSession ? { Authorization: `Bearer ${storedSession}` } : {}),
+        },
+        body: '{}',
+      });
+    } catch (error) {
+      console.warn('Logout: could not reach the server to end the session', error);
+    }
+    localStorage.removeItem('__session');
+
     await signOut(auth);
   };
 

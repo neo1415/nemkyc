@@ -699,7 +699,6 @@ const RentAssuranceClaim = () => {
             }}
             currentFile={uploadedFiles.rentAgreement}
             accept=".pdf,.jpg,.jpeg,.png"
-            maxSize={3}
           />
           
           <FileUpload
@@ -707,7 +706,6 @@ const RentAssuranceClaim = () => {
             onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, demandNote: file }))}
             currentFile={uploadedFiles.demandNote}
             accept=".pdf,.jpg,.jpeg,.png"
-            maxSize={3}
           />
           
           <FileUpload
@@ -715,7 +713,6 @@ const RentAssuranceClaim = () => {
             onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, quitNotice: file }))}
             currentFile={uploadedFiles.quitNotice}
             accept=".pdf,.jpg,.jpeg,.png"
-            maxSize={3}
           />
           
           <div className="bg-blue-50 p-4 rounded-lg">

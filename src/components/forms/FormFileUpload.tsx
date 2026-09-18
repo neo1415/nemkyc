@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info, Upload, X, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FILE_ACCEPT, MAX_FILE_SIZE_MB, getFileExtension, isAllowedFile } from '@/config/filePolicy';
 
 export interface FormFileUploadProps {
   name: string;
   label: string;
   required?: boolean;
-  accept: string;
-  maxSize: number; // in MB
+  /** Narrower list of formats for this field; never wider than the shared policy. */
+  accept?: string;
+  /** Size ceiling in MB; capped at the shared policy maximum. */
+  maxSize?: number;
   onFileSelect: (file: File) => void;
   onFileRemove: () => void;
   currentFile?: File;
@@ -22,13 +25,17 @@ export const FormFileUpload: React.FC<FormFileUploadProps> = ({
   name,
   label,
   required = false,
-  accept,
-  maxSize,
+  accept = FILE_ACCEPT,
+  maxSize: requestedMaxSize,
   onFileSelect,
   onFileRemove,
   currentFile,
   tooltip,
 }) => {
+  const maxSize = Math.min(
+    typeof requestedMaxSize === 'number' && requestedMaxSize > 0 ? requestedMaxSize : MAX_FILE_SIZE_MB,
+    MAX_FILE_SIZE_MB,
+  );
   const {
     formState: { errors },
     setValue,
@@ -44,18 +51,23 @@ export const FormFileUpload: React.FC<FormFileUploadProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file size
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > maxSize) {
-      setUploadError(`File size must be less than ${maxSize}MB`);
+    // Shared policy first: anything the backend would reject is rejected here.
+    const policy = isAllowedFile(file);
+    if (!policy.ok) {
+      setUploadError(policy.reason ?? 'Please choose a valid document');
       return;
     }
 
-    // Validate file type
-    const acceptedTypes = accept.split(',').map(t => t.trim());
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!acceptedTypes.includes(fileExtension)) {
+    // Then this field's (possibly narrower) accept list and size ceiling.
+    const acceptedTypes = accept.split(',').map(t => t.trim().toLowerCase());
+    const fileExtension = getFileExtension(file.name);
+    if (!acceptedTypes.includes(fileExtension) && !acceptedTypes.includes(file.type.toLowerCase())) {
       setUploadError(`File type must be one of: ${accept}`);
+      return;
+    }
+
+    if (file.size > maxSize * 1024 * 1024) {
+      setUploadError(`File size must be less than ${maxSize}MB`);
       return;
     }
 

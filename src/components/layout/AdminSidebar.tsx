@@ -19,8 +19,24 @@ import { cn } from '../../lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { normalizeRole, hasAnyRole } from '../../utils/roleNormalization';
+import { normalizeRole, rolesMatch } from '../../utils/roleNormalization';
 import { filterAccessibleClaimNavItems } from '../../config/claimAccessPolicy';
+
+/**
+ * Sidebar sections per role. 'admin' and 'super admin' see everything; 'claims' sees only the
+ * claims queue and its unit's claim collections; 'compliance' sees only KYC / CDD / NFIU tables.
+ */
+export function resolveSidebarAccess(rawRole: string | undefined) {
+  const role = normalizeRole(rawRole);
+  const isPlatformAdmin = rolesMatch(role, 'admin') || rolesMatch(role, 'super admin');
+  return {
+    role,
+    canViewUsers: rolesMatch(role, 'super admin'),
+    canViewClaims: isPlatformAdmin || rolesMatch(role, 'claims'),
+    canViewKYCCDD: isPlatformAdmin || rolesMatch(role, 'compliance'),
+    canViewIdentityCollection: isPlatformAdmin || rolesMatch(role, 'compliance') || rolesMatch(role, 'broker'),
+  };
+}
 
 interface AdminSidebarProps {
   open: boolean;
@@ -36,11 +52,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const [claimsOpen, setClaimsOpen] = useState(false);
 
   // Role-based access control - using normalized role comparison
-  const userRole = user?.role;
-  const canViewUsers = normalizeRole(userRole) === 'super admin';
-  const canViewClaims = hasAnyRole(userRole, ['claims', 'admin', 'super admin']);
-  const canViewKYCCDD = hasAnyRole(userRole, ['compliance', 'admin', 'super admin']);
-  const canViewIdentityCollection = hasAnyRole(userRole, ['broker', 'compliance', 'admin', 'super admin']);
+  const { canViewUsers, canViewClaims, canViewKYCCDD, canViewIdentityCollection } = resolveSidebarAccess(user?.role);
 
   const navigationItems = [
     {
@@ -48,6 +60,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       href: '/admin',
       icon: BarChart3
     },
+    ...(canViewClaims ? [{
+      name: 'Claims Queue',
+      href: '/admin/claims-queue',
+      icon: ClipboardCheck
+    }] : []),
     ...(canViewUsers ? [{
       name: 'Users',
       href: '/admin/users', 

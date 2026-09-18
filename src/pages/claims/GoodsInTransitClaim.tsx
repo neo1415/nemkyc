@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { isAllowedFile } from '@/config/filePolicy';
 import DatePicker from '@/components/common/DatePicker';
 import { createDOBValidation, createFromDateValidation, createToDateValidation, createEmailValidation, createPhoneValidation } from '@/utils/validation';
 import { useToast } from '@/hooks/use-toast';
@@ -141,15 +142,12 @@ const goodsInTransitClaimSchema = yup.object().shape({
   carriageConditionDocument: yup
     .mixed()
     .required("Carriage condition document is required")
-    .test('fileType', 'Please upload a PNG, JPG, JPEG, PDF, DOC, or DOCX file', (value) => {
-      if (!value) return false;
+    .test('filePolicy', 'Please upload a valid document', function (value) {
       const file = Array.isArray(value) ? value[0] : value;
-      const allowed = ['image/png','image/jpg','image/jpeg','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      return file && allowed.includes(file.type);
-    })
-    .test('fileSize', 'File size must be less than 3MB', (value) => {
-      const file = Array.isArray(value) ? value[0] : value;
-      return file ? file.size <= 3 * 1024 * 1024 : false;
+      // An already-uploaded document URL (e.g. restored after sign-in) is acceptable.
+      if (typeof file === 'string') return file.length > 0;
+      const result = isAllowedFile(file as File | null | undefined);
+      return result.ok || this.createError({ message: result.reason });
     }),
   claimMadeAgainstYou: yup.boolean().required("Please confirm if claim was made against you"),
   claimDateReceived: yup
@@ -1686,7 +1684,6 @@ const GoodsInTransitClaim: React.FC = () => {
                         formMethods.clearErrors('carriageConditionDocument');
                       }
                     }}
-                    maxSize={5}
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   />
                   {uploadedFiles.carriageConditionDocument && (

@@ -39,6 +39,18 @@ export default defineConfig(() => ({
   test: {
     globals: true,
     environment: 'jsdom',
+    // CI has no VITE_* secrets; src/firebase/config.ts calls getAuth() at import time and
+    // throws auth/invalid-api-key when the key is undefined. Tests never hit the network.
+    env: {
+      VITE_FIREBASE_API_KEY: 'test-api-key',
+      VITE_FIREBASE_AUTH_DOMAIN: 'test.firebaseapp.com',
+      VITE_FIREBASE_PROJECT_ID: 'test-project',
+      VITE_FIREBASE_STORAGE_BUCKET: 'test-project.appspot.com',
+      VITE_FIREBASE_MESSAGING_SENDER_ID: '0',
+      VITE_FIREBASE_APP_ID: '1:0:web:test',
+      VITE_API_BASE_URL: 'http://localhost:3001',
+      VITE_VERIFICATION_MODE: 'mock',
+    },
     setupFiles: ['./src/test-setup.ts'],
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',

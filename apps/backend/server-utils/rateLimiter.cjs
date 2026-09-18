@@ -23,6 +23,7 @@ class RateLimiter {
     
     // Start token refill interval
     this.refillInterval = setInterval(() => this.refillTokens(), 1000);
+    if (typeof this.refillInterval.unref === "function") this.refillInterval.unref();
   }
   
   /**

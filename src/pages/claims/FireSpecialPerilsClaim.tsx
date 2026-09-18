@@ -848,7 +848,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
                     onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, fireBrigadeReport: file }))}
                     currentFile={uploadedFiles.fireBrigadeReport}
                     accept=".pdf,.jpg,.jpeg,.png"
-                    maxSize={5}
                   />
                   {!uploadedFiles.fireBrigadeReport && (
                     <p className="text-sm text-destructive">This document is required to proceed</p>
@@ -880,7 +879,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
                           onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [`pictureOfLoss${index + 1}`]: file }))}
                           currentFile={uploadedFiles[`pictureOfLoss${index + 1}`]}
                           accept=".jpg,.jpeg,.png"
-                          maxSize={5}
                         />
                       </div>
                       {(watchedValues.picturesOfLoss?.length > 1) && (
@@ -915,7 +913,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
                     onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, policeReport: file }))}
                     currentFile={uploadedFiles.policeReport}
                     accept=".pdf,.jpg,.jpeg,.png"
-                    maxSize={5}
                   />
                   {!uploadedFiles.policeReport && (
                     <p className="text-sm text-destructive">This document is required to proceed</p>
@@ -947,7 +944,6 @@ const FireSpecialPerilsClaim: React.FC = () => {
                             onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, [`additionalDocument${index + 1}`]: file }))}
                             currentFile={uploadedFiles[`additionalDocument${index + 1}`]}
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            maxSize={5}
                           />
                         </div>
                         <Button

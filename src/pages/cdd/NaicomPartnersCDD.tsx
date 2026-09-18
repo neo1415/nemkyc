@@ -1012,7 +1012,6 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('vatRegistrationLicense');
                   }
                 }}
-                maxSize={5}
               />
               {uploadedFiles.vatRegistrationLicense && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
@@ -1041,7 +1040,6 @@ const NaicomPartnersCDD: React.FC = () => {
                     formMethods.clearErrors('taxClearanceCertificate');
                   }
                 }}
-                maxSize={5}
               />
               {uploadedFiles.taxClearanceCertificate && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-green-600">

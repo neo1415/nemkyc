@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useGuestIdentity } from '../contexts/GuestIdentityContext';
+import type { GuestIdentity } from '../components/auth/GuestIdentityDialog';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getCSRFToken } from '../utils/csrfToken';
 import { secureStorageRemove } from '../utils/secureStorage';
+import {
+  describeReattachFields,
+  readPendingFileFields,
+  stripFilesFromPayload,
+} from '../utils/pendingSubmission';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -25,8 +32,12 @@ const CLAIM_DRAFT_KEYS: Record<string, string> = {
 };
 
 const savePendingSubmission = (formData: any, formType: string, currentStep = 0, resumeState = 'ready') => {
+  // Raw File/Blob values cannot survive JSON; strip them and remember which
+  // fields need to be attached again when the submission resumes.
+  const { formData: serialisableFormData, pendingFileFields } = stripFilesFromPayload(formData);
   sessionStorage.setItem('pendingSubmission', JSON.stringify({
-    formData,
+    formData: serialisableFormData,
+    pendingFileFields,
     formType,
     timestamp: Date.now(),
     currentStep,
@@ -108,6 +119,7 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
 
 export const useAuthRequiredSubmit = (currentStep?: number) => {
   const { user, firebaseUser } = useAuth();
+  const { requestGuestIdentity } = useGuestIdentity();
   const navigate = useNavigate();
   const [pendingSubmission, setPendingSubmission] = useState<PendingSubmission | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -123,11 +135,22 @@ export const useAuthRequiredSubmit = (currentStep?: number) => {
       // Do not resume until Firebase can provide the bearer token. The application
       // profile and Firebase user can become available on separate renders.
       if (pendingData && user && firebaseUser) {
-        const { formData, formType, timestamp, resumeState = 'ready' } = JSON.parse(pendingData);
-        
+        const parsedPending = JSON.parse(pendingData);
+        const { formData, formType, timestamp, resumeState = 'ready' } = parsedPending;
+        const pendingFileFields = readPendingFileFields(parsedPending);
+
         // Check if submission is not expired (30 minutes)
         if (Date.now() - timestamp < 30 * 60 * 1000) {
           if (resumeState === 'needs-review') return;
+
+          // Documents attached before sign-in were lost in transit; ask for them
+          // again rather than submitting the claim without them.
+          if (pendingFileFields.length > 0) {
+            markPendingForReview();
+            toast.error(describeReattachFields(pendingFileFields));
+            return;
+          }
+
           console.log('🎯 Processing pending submission on form page');
           setIsSubmitting(true);
           
@@ -171,15 +194,19 @@ export const useAuthRequiredSubmit = (currentStep?: number) => {
     formType: string,
     submitFunction?: (data: any) => Promise<void>
   ): Promise<boolean> => {
+    let guestIdentity: GuestIdentity | null = null;
     if (!user) {
-      // Store pending submission with current step
-      savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
-      
-      navigate('/auth/signin');
-      return false;
-    }
-
-    if (!firebaseUser) {
+      // Guests give a name and email instead of registering; the backend creates the account.
+      const choice = await requestGuestIdentity({ formLabel: formType });
+      if (!choice) return false;
+      if (choice.kind === 'signed-in') {
+        // The resume effect submits once AuthContext reflects the new session.
+        savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
+        toast.info('Signed in. Submitting your claim...');
+        return false;
+      }
+      guestIdentity = choice.identity;
+    } else if (!firebaseUser) {
       savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
       const message = 'Your secure sign-in is still being completed. Please wait a moment and submit again.';
       toast.error(message);
@@ -189,13 +216,28 @@ export const useAuthRequiredSubmit = (currentStep?: number) => {
     try {
       setIsSubmitting(true);
       savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
-      
+
       const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/submit-form`, {
         formData,
         formType,
-        userEmail: user.email,
-        userUid: user.uid
+        userEmail: user?.email ?? guestIdentity?.email,
+        userUid: user?.uid,
+        ...(guestIdentity ? { guest: guestIdentity } : {}),
       }, 'POST', firebaseUser);
+
+      if (response.status === 409 && guestIdentity) {
+        const body = await response.clone().json().catch(() => null);
+        if (body?.code === 'ACCOUNT_EXISTS') {
+          const retry = await requestGuestIdentity({ formLabel: formType, accountExists: true, initialIdentity: guestIdentity });
+          if (retry?.kind === 'signed-in') {
+            savePendingSubmission(formData, formType, typeof currentStep === 'number' ? currentStep : 0);
+            setIsSubmitting(false);
+            toast.info('Signed in. Submitting your claim...');
+            return false;
+          }
+          throw new Error('This email already has an account. Sign in to submit, or use a different email.');
+        }
+      }
 
       if (!response.ok) {
         throw new Error(await getSubmissionError(response));

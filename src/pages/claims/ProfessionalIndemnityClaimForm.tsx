@@ -650,7 +650,6 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                     onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, writtenIntimation: file }))}
                     currentFile={uploadedFiles.writtenIntimation}
                     accept=".pdf"
-                    maxSize={3}
                   />
                 )}
                 
@@ -710,7 +709,6 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                     onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, contractDocument: file }))}
                     currentFile={uploadedFiles.contractDocument}
                     accept=".pdf"
-                    maxSize={3}
                   />
                 )}
                 
@@ -823,7 +821,6 @@ const ProfessionalIndemnityClaimForm: React.FC = () => {
                       onFileSelect={(file) => setUploadedFiles(prev => ({ ...prev, additionalDocument: file }))}
                       currentFile={uploadedFiles.additionalDocument}
                       accept=".pdf,.jpg,.png"
-                      maxSize={3}
                     />
                   </div>
                 )}

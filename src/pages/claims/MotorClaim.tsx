@@ -459,7 +459,6 @@ const MotorClaim: React.FC = () => {
                   }}
                   currentFile={uploadedFiles.policeReport}
                   accept=".pdf,.jpg,.jpeg,.png"
-                  maxSize={5}
                   error={fileErrors.policeReport}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -512,7 +511,6 @@ const MotorClaim: React.FC = () => {
                     }}
                     currentFile={uploadedFiles.thirdPartyDamagePhotos}
                     accept=".pdf,.jpg,.jpeg,.png"
-                    maxSize={5}
                     error={fileErrors.thirdPartyDamagePhotos}
                   />
                   <p className="text-sm text-muted-foreground mt-2">

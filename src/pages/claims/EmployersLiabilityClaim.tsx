@@ -1133,7 +1133,6 @@ const EmployersLiabilityClaim: React.FC = () => {
                 onFileRemove={() => setUploadedFiles(prev => ({ ...prev, supportingDocuments: undefined }))}
                 currentFile={uploadedFiles.supportingDocuments}
                 accept=".jpg,.jpeg,.png,.pdf"
-                maxSize={3}
                 label="Upload Supporting Documents"
               />
             </div>

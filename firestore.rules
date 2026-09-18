@@ -131,7 +131,7 @@ service cloud.firestore {
       // Tour fields: onboardingTourStep, onboardingTourStartedAt, onboardingTourLastAction, onboardingTourCompleted
       allow update: if request.auth != null && (
         (request.auth.uid == userId &&
-         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'uid', 'createdBy', 'createdAt'])) ||
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'uid', 'createdBy', 'createdAt', 'claimAccessAll', 'assignedClaimCollections', 'disabled', 'mustChangePassword'])) ||
         (exists(/databases/$(database)/documents/userroles/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/userroles/$(request.auth.uid)).data.role in ['super admin', 'superAdmin', 'super-admin', 'SuperAdmin'])
       );
@@ -737,6 +737,11 @@ service cloud.firestore {
     
     // Rate limits - Backend-only collection for rate limiting enforcement
     // SECURITY: No direct client access - all operations handled by backend
+    // Server-side login sessions (hashed ids) - backend only
+    match /sessions/{docId} {
+      allow read, write: if false;
+    }
+
     match /rateLimits/{docId} {
       // No client read access - backend only
       allow read: if false;

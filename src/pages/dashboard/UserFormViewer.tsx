@@ -3,22 +3,31 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { Button, Typography, Box, Paper, Divider, Chip } from '@mui/material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { Download, ArrowLeft } from 'lucide-react';
+import { Download, ArrowLeft, Loader2, Hash, Calendar } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Separator } from '../../components/ui/separator';
+import ClaimProgress from '../../components/claims/ClaimProgress';
+import ClaimTimeline from '../../components/claims/ClaimTimeline';
+import OfferCard from '../../components/claims/OfferCard';
+import OutstandingDocuments from '../../components/claims/OutstandingDocuments';
+import { resolveClaimBlock, type ClaimBlock } from '../../lib/claimLifecycle';
+import { isClaimCollection } from '../../lib/submissionFamilies';
 import { downloadDynamicPDF } from '../../services/dynamicPdfService';
 import { FORM_MAPPINGS, FormField } from '../../config/formMappings';
 import { downloadSubmissionDocument } from '../../services/secureDocumentService';
 import { formatDate as formatDateUtil } from '../../utils/dateFormatter';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: 'hsl(350, 50%, 30%)', // Burgundy from design system
-    },
-  },
-});
+const STATUS_BADGE: Record<string, string> = {
+  approved: 'bg-green-100 text-green-800 border-green-300',
+  completed: 'bg-green-100 text-green-800 border-green-300',
+  rejected: 'bg-red-100 text-red-800 border-red-300',
+  cancelled: 'bg-red-100 text-red-800 border-red-300',
+};
+const statusBadgeClass = (status: unknown) =>
+  STATUS_BADGE[String(status || '').toLowerCase()] || 'bg-yellow-100 text-yellow-800 border-yellow-300';
 
 interface FormFieldWithValue extends FormField {
   value: any;
@@ -96,10 +105,10 @@ const UserFormViewer: React.FC = () => {
   const fetchFormData = async () => {
     try {
       if (!collection || !id) return;
-      
+
       const docRef = doc(db, collection, id);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const data = {
           id: docSnap.id,
@@ -109,7 +118,7 @@ const UserFormViewer: React.FC = () => {
           updatedAt: docSnap.data().updatedAt?.toDate?.() || docSnap.data().updatedAt,
           status: docSnap.data().status || 'processing'
         };
-        
+
         // Verify user owns this submission
         if (!isSubmissionOwner(data, user)) {
           toast({
@@ -120,9 +129,9 @@ const UserFormViewer: React.FC = () => {
           navigate('/dashboard');
           return;
         }
-        
+
         setFormData(data);
-        
+
         // Organize fields using form mapping
         const mappingKey = getFormMappingKey(collection, data);
         const mapping = FORM_MAPPINGS[mappingKey];
@@ -209,20 +218,20 @@ const UserFormViewer: React.FC = () => {
     if (!field.conditional) {
       return true;
     }
-    
+
     const dependentValue = watchedValues[field.conditional.dependsOn];
     return dependentValue === field.conditional.value;
   };
 
   const organizeFieldsWithMapping = (data: any, mapping: any): Record<string, FormFieldWithValue[]> => {
     const organized: Record<string, FormFieldWithValue[]> = {};
-    
+
     // Administrative fields to exclude from user view
     const adminFields = ['id', 'collection', 'formId', 'userUid', 'timestamp', 'sn', 'S/N', 'serialNumber', 'rowNumber'];
-    
+
     mapping.sections.forEach((section: any) => {
       const sectionFields: FormFieldWithValue[] = [];
-      
+
       section.fields.forEach((field: FormField) => {
         // Skip administrative fields
         if (adminFields.includes(field.key) ||
@@ -232,11 +241,11 @@ const UserFormViewer: React.FC = () => {
             field.label?.toLowerCase().includes('serial')) {
           return;
         }
-        
+
         // Check if field should be shown based on conditional logic
         if (shouldShowField(field, data)) {
           let value = resolveDashboardFieldValue(data, field.key);
-          
+
           // Handle array normalization
           if (field.type === 'array' && value !== null && value !== undefined) {
             if (Array.isArray(value)) {
@@ -247,7 +256,7 @@ const UserFormViewer: React.FC = () => {
               value = [];
             }
           }
-          
+
           sectionFields.push({
             ...field,
             value: value !== undefined && value !== null && value !== '' ? value : 'N/A',
@@ -255,12 +264,12 @@ const UserFormViewer: React.FC = () => {
           });
         }
       });
-      
+
       if (sectionFields.length > 0) {
         organized[section.title] = sectionFields;
       }
     });
-    
+
     return organized;
   };
 
@@ -268,10 +277,10 @@ const UserFormViewer: React.FC = () => {
     const organized: Record<string, FormFieldWithValue[]> = {
       'Form Data': []
     };
-    
-    // Administrative fields to exclude
-    const adminFields = ['id', 'collection', 'formId', 'userUid', 'timestamp'];
-    
+
+    // Administrative fields to exclude (the claim lifecycle block is rendered by the tracker above)
+    const adminFields = ['id', 'collection', 'formId', 'userUid', 'timestamp', 'claim'];
+
     Object.entries(data).forEach(([key, value]) => {
       if (!adminFields.includes(key)) {
         organized['Form Data'].push({
@@ -283,7 +292,7 @@ const UserFormViewer: React.FC = () => {
         });
       }
     });
-    
+
     return organized;
   };
 
@@ -342,11 +351,11 @@ const UserFormViewer: React.FC = () => {
 
   const generatePDF = async () => {
     if (!formData || !collection) return;
-    
+
     setIsGeneratingPDF(true);
     try {
       await downloadDynamicPDF(formData);
-      
+
       toast({
         title: 'Success',
         description: 'PDF downloaded successfully',
@@ -367,23 +376,24 @@ const UserFormViewer: React.FC = () => {
     const { key, value, type, label } = field;
 
     // Handle file fields
-    if (type === 'file' || type === 'url' || 
+    if (type === 'file' || type === 'url' ||
         (typeof value === 'string' && (value.startsWith('gs://') || value.includes('firebasestorage.googleapis.com'))) ||
         key.toLowerCase().includes('url') || key.toLowerCase().includes('file')) {
       const fieldLabel = label.replace(/Url$/, '');
-      
+
       if (!value || value === null || value === undefined || value === '') {
-        return <Typography variant="body2" color="text.secondary">N/A</Typography>;
+        return <p className="text-sm text-gray-500">N/A</p>;
       }
-      
+
       return (
         <Button
-          size="small"
-          variant="outlined"
-          startIcon={<Download />}
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-1 border-[#800020] text-[#800020] hover:bg-[#800020] hover:text-white"
           onClick={() => handleDownloadFile(key, `${fieldLabel}.pdf`)}
-          sx={{ mt: 1 }}
         >
+          <Download className="h-4 w-4 mr-1" aria-hidden="true" />
           Download {fieldLabel}
         </Button>
       );
@@ -391,110 +401,85 @@ const UserFormViewer: React.FC = () => {
 
     // Handle empty values
     if (value === null || value === undefined || value === '') {
-      return <Typography variant="body2" color="text.secondary">N/A</Typography>;
+      return <p className="text-sm text-gray-500">N/A</p>;
     }
 
     switch (type) {
       case 'boolean':
         return (
-          <Chip 
-            label={value ? 'Yes' : 'No'} 
-            color={value ? 'success' : 'default'} 
-            size="small" 
-          />
+          <Badge className={value ? 'bg-green-100 text-green-800 border-green-300' : 'bg-gray-100 text-gray-700 border-gray-300'}>
+            {value ? 'Yes' : 'No'}
+          </Badge>
         );
-      
+
       case 'date':
-        return <Typography variant="body1">{formatDate(value)}</Typography>;
-      
+        return <p className="text-sm text-gray-900">{formatDate(value)}</p>;
+
       case 'currency':
         return (
-          <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+          <p className="text-sm font-medium text-gray-900">
             ₦{typeof value === 'number' ? value.toLocaleString() : value}
-          </Typography>
+          </p>
         );
-      
+
       case 'email':
         return (
-          <Typography variant="body1" component="a" href={`mailto:${value}`} sx={{ color: 'primary.main' }}>
+          <a href={`mailto:${value}`} className="text-sm text-[#800020] hover:underline break-all">
             {value}
-          </Typography>
+          </a>
         );
-      
+
       case 'array':
         if (!Array.isArray(value) || value.length === 0) {
-          return <Typography variant="body2" color="text.secondary">N/A</Typography>;
+          return <p className="text-sm text-gray-500">N/A</p>;
         }
-        
+
         return (
-          <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div className="mt-1 flex flex-col gap-3">
             {value.map((item, index) => (
-              <Paper 
-                key={index} 
-                elevation={2}
-                sx={{ 
-                  p: 3, 
-                  backgroundColor: '#f8f9fa',
-                  border: '1px solid #e9ecef',
-                  borderRadius: 2
-                }}
-              >
-                <Typography variant="subtitle2" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+              <div key={index} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-sm font-semibold text-[#800020]">
                   {label} {index + 1}
-                </Typography>
+                </p>
                 {typeof item === 'object' && item !== null ? (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {Object.entries(item).map(([itemKey, itemValue]) => (
-                      <Box key={itemKey} sx={{ p: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
-                          {formatFieldLabel(itemKey)}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                          {String(itemValue || 'N/A')}
-                        </Typography>
-                      </Box>
+                      <div key={itemKey}>
+                        <p className="text-xs font-semibold text-gray-500 mb-0.5">{formatFieldLabel(itemKey)}</p>
+                        <p className="text-sm font-medium text-gray-900 break-words">{String(itemValue || 'N/A')}</p>
+                      </div>
                     ))}
-                  </Box>
+                  </div>
                 ) : (
-                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>{String(item)}</Typography>
+                  <p className="text-sm font-medium text-gray-900">{String(item)}</p>
                 )}
-              </Paper>
+              </div>
             ))}
-          </Box>
+          </div>
         );
-      
+
       case 'object':
         if (typeof value !== 'object' || value === null) {
-          return <Typography variant="body1">{String(value)}</Typography>;
+          return <p className="text-sm text-gray-900">{String(value)}</p>;
         }
-        
+
         return (
-          <Box sx={{ mt: 1 }}>
+          <div className="mt-1 space-y-1">
             {Object.entries(value).map(([objKey, objValue]) => (
-              <Box key={objKey} sx={{ mb: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {formatFieldLabel(objKey)}:
-                </Typography>
-                <Typography variant="body2" sx={{ ml: 1 }}>
-                  {String(objValue)}
-                </Typography>
-              </Box>
+              <div key={objKey} className="text-sm">
+                <span className="text-xs text-gray-500">{formatFieldLabel(objKey)}: </span>
+                <span className="text-gray-900 break-words">{String(objValue)}</span>
+              </div>
             ))}
-          </Box>
+          </div>
         );
-      
+
       default:
         const displayValue = String(value);
         return (
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              wordBreak: 'break-word',
-              whiteSpace: type === 'textarea' ? 'pre-wrap' : 'normal'
-            }}
-          >
+          <p className={`text-sm text-gray-900 break-words ${type === 'textarea' ? 'whitespace-pre-wrap' : ''}`}>
             {displayValue}
-          </Typography>
+          </p>
         );
     }
   };
@@ -505,178 +490,151 @@ const UserFormViewer: React.FC = () => {
 
   if (loading) {
     return (
-      <ThemeProvider theme={theme}>
-        <Box sx={{ p: 3 }}>
-          <Typography>Loading...</Typography>
-        </Box>
-      </ThemeProvider>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto p-6 text-center py-16">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#800020]"></div>
+          <p className="mt-4 text-gray-600">Loading your submission...</p>
+        </div>
+      </div>
     );
   }
 
   if (!formData) {
     return (
-      <ThemeProvider theme={theme}>
-        <Box sx={{ p: 3 }}>
-          <Typography>Form not found</Typography>
-        </Box>
-      </ThemeProvider>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto p-6">
+          <p className="text-gray-700">Form not found</p>
+        </div>
+      </div>
     );
   }
 
   const mappingKey = getFormMappingKey(collection || '', formData);
   const mapping = FORM_MAPPINGS[mappingKey];
   const formTitle = mapping?.title || collection?.replace(/[-_]/g, ' ').toUpperCase();
+  const isClaim = isClaimCollection(collection);
+  const claim: ClaimBlock | null = isClaim ? resolveClaimBlock(formData) : null;
+  const applyClaimUpdate = (updated: ClaimBlock) => {
+    setFormData((prev: any) => (prev ? { ...prev, claim: updated } : prev));
+  };
+
+  const submittedBadge = formData.createdAt ? (
+    <Badge variant="outline" className="text-gray-700">
+      <Calendar className="h-3 w-3 mr-1" aria-hidden="true" />
+      Submitted: {formatDate(formData.createdAt)}
+    </Badge>
+  ) : null;
 
   return (
-    <ThemeProvider theme={theme}>
-      <Box sx={{ 
-        p: { xs: 2, sm: 3 }, 
-        maxWidth: '1200px', 
-        mx: 'auto',
-        width: '100%',
-        minHeight: '100vh'
-      }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', md: 'row' },
-          alignItems: { xs: 'stretch', md: 'center' }, 
-          mb: 3,
-          gap: 2
-        }}>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
           <Button
-            startIcon={<ArrowLeft />}
+            type="button"
+            variant="ghost"
+            className="self-start text-[#800020] hover:bg-[#800020]/5"
             onClick={() => navigate('/dashboard')}
-            sx={{ order: { xs: 1, md: 0 } }}
           >
+            <ArrowLeft className="h-4 w-4 mr-1" aria-hidden="true" />
             Back to Dashboard
           </Button>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              flexGrow: 1,
-              fontSize: { xs: '1.5rem', md: '2rem' },
-              order: { xs: 0, md: 1 }
-            }}
+          <h1 className="flex-1 text-2xl md:text-3xl font-bold text-[#800020]">{formTitle}</h1>
+          <Button
+            type="button"
+            className="bg-[#800020] hover:bg-[#600018] text-white"
+            onClick={generatePDF}
+            disabled={isGeneratingPDF}
           >
-            {formTitle}
-          </Typography>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 1,
-            order: { xs: 2, md: 2 }
-          }}>
-            <Button
-              variant="contained"
-              startIcon={<Download />}
-              onClick={generatePDF}
-              disabled={isGeneratingPDF}
-              fullWidth={true}
-              sx={{ 
-                minWidth: { xs: 'auto', sm: 'unset' }
-              }}
-            >
-              {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
-            </Button>
-          </Box>
-        </Box>
+            {isGeneratingPDF ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden="true" /> Generating...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-1" aria-hidden="true" /> Download PDF
+              </>
+            )}
+          </Button>
+        </div>
 
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-          {/* Ticket ID Display - Prominent */}
-          {formData.ticketId && (
-            <Box sx={{ 
-              mb: 3, 
-              p: 3, 
-              backgroundColor: '#f8f9fa',
-              border: '2px solid #800020',
-              borderRadius: 2,
-              textAlign: 'center'
-            }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Your Ticket ID
-              </Typography>
-              <Typography variant="h4" sx={{ color: '#800020', fontWeight: 'bold', fontFamily: 'monospace' }}>
-                {formData.ticketId}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Please reference this ID in all future correspondence
-              </Typography>
-            </Box>
-          )}
+        {isClaim && claim ? (
+          <>
+            {/* Claim tracker */}
+            <Card className="shadow-md border-2 border-[#800020]/20" data-testid="claim-tracker">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-[#800020]">Claim progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ClaimProgress doc={formData} />
+              </CardContent>
+            </Card>
 
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              Submission Details
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-              <Chip 
-                label={`Status: ${formData.status || 'pending'}`} 
-                size="small" 
-                color={formData.status === 'approved' ? 'success' : formData.status === 'rejected' ? 'error' : 'default'}
-                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-              />
-              {formData.createdAt && (
-                <Chip 
-                  label={`Submitted: ${formatDate(formData.createdAt)}`} 
-                  size="small" 
-                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                />
+            {collection && id && (
+              <>
+                <OfferCard collection={collection} id={id} claim={claim} onUpdated={applyClaimUpdate} />
+                <OutstandingDocuments collection={collection} id={id} claim={claim} onUpdated={applyClaimUpdate} />
+              </>
+            )}
+
+            <ClaimTimeline claim={claim} />
+          </>
+        ) : (
+          <Card className="shadow-md">
+            <CardContent className="p-6">
+              {formData.ticketId && (
+                <div className="mb-5 rounded-lg border-2 border-[#800020] bg-gray-50 p-5 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Your Ticket ID</p>
+                  <p className="text-2xl md:text-3xl font-bold font-mono text-[#800020]">{formData.ticketId}</p>
+                  <p className="text-xs text-gray-500 mt-1">Please reference this ID in all future correspondence</p>
+                </div>
               )}
-            </Box>
-          </Box>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Submission Details</h2>
+              <div className="flex flex-wrap gap-2">
+                <Badge className={statusBadgeClass(formData.status)} data-testid="submission-status">
+                  Status: {String(formData.status || 'pending')}
+                </Badge>
+                {submittedBadge}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          <Divider sx={{ mb: 3 }} />
-
-          {Object.entries(organizedFields).map(([sectionTitle, fields]) => (
-            <Paper key={sectionTitle} elevation={1} sx={{ 
-              mb: { xs: 2, sm: 3 }, 
-              p: { xs: 2, sm: 3 }, 
-              bgcolor: 'grey.50' 
-            }}>
-              <Typography 
-                variant="h6" 
-                gutterBottom 
-                sx={{ 
-                  color: 'primary.main', 
-                  mb: 2,
-                  fontSize: { xs: '1rem', sm: '1.25rem' }
-                }}
-              >
-                {sectionTitle}
-              </Typography>
-              <Box sx={{ 
-                display: 'grid', 
-                gap: { xs: 2, sm: 3 },
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(300px, 1fr))' }
-              }}>
-                {fields.map((field) => (
-                  <Box key={field.key} sx={{ width: '100%' }}>
-                    <Typography 
-                      variant="subtitle2" 
-                      color="text.secondary" 
-                      sx={{ 
-                        mb: 1,
-                        fontWeight: 'medium',
-                        fontSize: { xs: '0.8rem', sm: '0.875rem' }
-                      }}
-                    >
-                      {field.label}
-                    </Typography>
-                    <Box sx={{ 
-                      width: '100%',
-                      overflow: 'hidden',
-                      wordBreak: 'break-word'
-                    }}>
-                      {renderFieldValue(field)}
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          ))}
-        </Paper>
-      </Box>
-    </ThemeProvider>
+        {/* Submitted details */}
+        <Card className="shadow-md" data-testid="submission-details">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold text-[#800020]">Submitted details</CardTitle>
+            {isClaim && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {formData.ticketId && (
+                  <Badge variant="outline" className="text-gray-700 font-mono">
+                    <Hash className="h-3 w-3 mr-1 text-[#DAA520]" aria-hidden="true" />
+                    {formData.ticketId}
+                  </Badge>
+                )}
+                {submittedBadge}
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <Separator />
+            {Object.entries(organizedFields).map(([sectionTitle, fields]) => (
+              <section key={sectionTitle} className="rounded-lg bg-gray-50 border border-gray-100 p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-semibold text-[#800020] mb-4">{sectionTitle}</h3>
+                <div className="grid gap-4 sm:gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                  {fields.map((field) => (
+                    <div key={field.key} className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">{field.label}</p>
+                      <div className="min-w-0 overflow-hidden break-words">{renderFieldValue(field)}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

@@ -33,6 +33,16 @@ interface DocumentAIResponse {
   error?: string;
 }
 
+/** A Document AI failure that is worth retrying and, if it persists, never blocks a submission. */
+export class DocumentAITransientError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'DocumentAITransientError';
+    this.status = status;
+  }
+}
+
 export class DocumentAIOCREngine {
   private rateLimiter: Map<string, number[]> = new Map();
   private readonly apiBaseUrl: string;
@@ -228,6 +238,26 @@ export class DocumentAIOCREngine {
    * Make API call to Document AI via backend
    */
   private async makeApiCall(request: DocumentAIRequest): Promise<DocumentAIResponse> {
+    // Transient failures (rate limits, 5xx, timeouts, network) are retried with backoff so a
+    // momentary hiccup never reaches the customer as a verification failure.
+    const maxAttempts = 3;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await this.makeApiCallOnce(request);
+      } catch (error) {
+        lastError = error;
+        const transient = error instanceof DocumentAITransientError;
+        if (!transient || attempt === maxAttempts) throw error;
+        const delayMs = 1000 * 2 ** (attempt - 1);
+        console.warn(`Document AI attempt ${attempt} failed (${(error as Error).message}); retrying in ${delayMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw lastError;
+  }
+
+  private async makeApiCallOnce(request: DocumentAIRequest): Promise<DocumentAIResponse> {
     const url = `${this.apiBaseUrl}/api/document-ai/process`;
 
     console.log('Making Document AI API call to backend:', url);
@@ -267,12 +297,15 @@ export class DocumentAIOCREngine {
           errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
         } else if (response.status === 403) {
           errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
-        } else if (response.status === 429) {
+                } else if (response.status === 429) {
           errorMessage = errorData.message || 'Document verification is temporarily busy. Please wait a few minutes and try again.';
         } else if (response.status >= 500) {
           errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
         }
-        
+
+        if (response.status === 429 || response.status >= 500) {
+          throw new DocumentAITransientError(errorMessage, response.status);
+        }
         throw new Error(errorMessage);
       }
 
@@ -283,11 +316,15 @@ export class DocumentAIOCREngine {
     } catch (error) {
       clearTimeout(timeoutId);
       
-      if (error instanceof Error && error.name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
         console.error('Document AI API call aborted:', error.message);
-        throw new Error(`Request timeout: ${error.message || 'The request took too long to complete'}`);
+        throw new DocumentAITransientError(`Request timeout: ${error.message || 'The request took too long to complete'}`, 0);
       }
-      
+      if (error instanceof TypeError) {
+        // fetch() rejects with a TypeError on network failure
+        throw new DocumentAITransientError('Connection issue while contacting document verification', 0);
+      }
+
       console.error('Document AI API call failed:', error);
       throw error;
     }

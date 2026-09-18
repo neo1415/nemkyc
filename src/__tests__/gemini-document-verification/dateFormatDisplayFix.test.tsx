@@ -110,7 +110,7 @@ describe('Date Format Display Fix', () => {
     
     // Wait for error display
     await waitFor(() => {
-      const errorSection = screen.queryByText(/Document Verification Failed/i);
+      const errorSection = screen.queryAllByText(/Document Verification Failed/i)[0];
       expect(errorSection).toBeInTheDocument();
     }, { timeout: 2000 });
     
@@ -188,7 +188,7 @@ describe('Date Format Display Fix', () => {
     }, { timeout: 5000 });
     
     await waitFor(() => {
-      const errorSection = screen.queryByText(/Document Verification Failed/i);
+      const errorSection = screen.queryAllByText(/Document Verification Failed/i)[0];
       expect(errorSection).toBeInTheDocument();
     }, { timeout: 2000 });
     
@@ -261,7 +261,7 @@ describe('Date Format Display Fix', () => {
     }, { timeout: 5000 });
     
     await waitFor(() => {
-      const errorSection = screen.queryByText(/Document Verification Failed/i);
+      const errorSection = screen.queryAllByText(/Document Verification Failed/i)[0];
       expect(errorSection).toBeInTheDocument();
     }, { timeout: 2000 });
     

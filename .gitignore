@@ -32,16 +32,9 @@ google-cloud-credentials.json
 *-credentials.json
 service-account*.json
 
-# Firebase rules (security-sensitive - environment-specific)
-firestore.rules
-firestore.rules.development
-firestore.rules.staging
-firestore.rules.production
-storage.rules
-storage.rules.development
-storage.rules.staging
-storage.rules.production
-firestore.indexes.json
+# Firebase rules and indexes are versioned and deployed from firebase.json.
+# Local Firebase Hosting cache
+.firebase/
 
 # misc
 .DS_Store

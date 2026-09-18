@@ -25,12 +25,10 @@ import {
   InputLabel,
   Select
 } from '@mui/material';
-import { 
-  Visibility, 
-  Delete, 
+import {
+  Visibility,
+  Delete,
   Download,
-  CheckCircle,
-  Cancel,
   FilterList,
   GetApp
 } from '@mui/icons-material';
@@ -97,12 +95,6 @@ const AdminUnifiedTable: React.FC<AdminUnifiedTableProps> = ({
   const [columns, setColumns] = useState<GridColDef[]>([]);
   const [filterValue, setFilterValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [approvalDialog, setApprovalDialog] = useState<{ 
-    open: boolean; 
-    action: 'approve' | 'reject' | null; 
-    form: FormData | null;
-    comment: string;
-  }>({ open: false, action: null, form: null, comment: '' });
 
   useEffect(() => {
     if (!user || !isAdmin()) {
@@ -533,62 +525,6 @@ const fetchForms = async () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleApprovalAction = async () => {
-    if (!approvalDialog.form || !approvalDialog.action) return;
-
-    const { form, action, comment } = approvalDialog;
-    
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_BASE_URL}/api/update-claim-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          collectionName,
-          documentId: form.id,
-          status: action === 'approve' ? 'approved' : 'rejected',
-          approverUid: user?.uid,
-          comment: comment.trim() || `Claim ${action}d by administrator`,
-          userEmail: form.email || form.insuredEmail,
-          formType: title
-        }),
-      });
-
-      if (response.ok) {
-        toast({ 
-          title: 'Success', 
-          description: `Claim ${action}d successfully` 
-        });
-        
-        // Update local state
-        setForms(prev => prev.map(f => 
-          f.id === form.id 
-            ? { 
-                ...f, 
-                status: action === 'approve' ? 'approved' : 'rejected',
-                approvedBy: user?.uid,
-                approvedAt: new Date(),
-                approvalComment: comment.trim() || `Claim ${action}d by administrator`
-              } 
-            : f
-        ));
-        
-        setApprovalDialog({ open: false, action: null, form: null, comment: '' });
-      } else {
-        throw new Error('Failed to update claim status');
-      }
-    } catch (error) {
-      console.error('Error updating claim status:', error);
-      toast({ 
-        title: 'Error', 
-        description: `Failed to ${action} claim`, 
-        variant: 'destructive' 
-      });
-    }
-  };
-
   const generateColumns = (data: FormData[]) => {
     const sampleData = data[0];
     const dynamicColumns: GridColDef[] = [];
@@ -615,7 +551,7 @@ const fetchForms = async () => {
           />
         ];
 
-        // Removed approve/reject actions - functionality available in details page
+        // Claim lifecycle actions live in FormViewer (ClaimTransitionDialog), not in the table.
 
         return actions;
       },
@@ -1080,61 +1016,6 @@ const fetchForms = async () => {
             <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleDeleteConfirm} color="error" variant="contained">
               Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Approval/Rejection Dialog */}
-        <Dialog
-          open={approvalDialog.open}
-          onClose={() => setApprovalDialog({ open: false, action: null, form: null, comment: '' })}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>
-            {approvalDialog.action === 'approve' ? 'Approve Claim' : 'Reject Claim'}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" gutterBottom>
-              Are you sure you want to {approvalDialog.action} this claim?
-            </Typography>
-            {approvalDialog.form && (
-              <Box mb={2}>
-                <Typography variant="body2" color="textSecondary">
-                  <strong>Claimant:</strong> {approvalDialog.form.nameOfInsured || approvalDialog.form.insuredName || approvalDialog.form.companyName || 'N/A'}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  <strong>Email:</strong> {approvalDialog.form.email || approvalDialog.form.insuredEmail || 'N/A'}
-                </Typography>
-              </Box>
-            )}
-            <TextField
-              autoFocus
-              margin="dense"
-              label={`${approvalDialog.action === 'approve' ? 'Approval' : 'Rejection'} Comment`}
-              multiline
-              rows={4}
-              fullWidth
-              variant="outlined"
-              value={approvalDialog.comment}
-              onChange={(e) => setApprovalDialog(prev => ({ ...prev, comment: e.target.value }))}
-              placeholder={`Please provide a reason for ${approvalDialog.action}ing this claim...`}
-              required
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => setApprovalDialog({ open: false, action: null, form: null, comment: '' })}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleApprovalAction}
-              color={approvalDialog.action === 'approve' ? 'success' : 'error'}
-              variant="contained"
-              disabled={!approvalDialog.comment.trim()}
-            >
-              {approvalDialog.action === 'approve' ? 'Approve' : 'Reject'}
             </Button>
           </DialogActions>
         </Dialog>
