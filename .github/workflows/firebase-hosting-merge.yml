@@ -42,11 +42,14 @@ jobs:
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
-      - name: Deploy Firestore rules
+      # Both rules deploys need IAM roles the hosting service account does not have yet
+      # (grant "Firebase Rules Admin" and "Storage Admin" to
+      # github-action-*@nem-customer-feedback-8d3fb.iam.gserviceaccount.com in GCP IAM). Until then
+      # they report the failure without blocking the release; rules are deployed by hand.
+      - name: Deploy Firestore rules (needs Firebase Rules Admin on the CI service account)
+        continue-on-error: true
         run: npx --yes firebase-tools@latest deploy --only firestore:rules --project nem-customer-feedback-8d3fb --non-interactive
-      # The hosting deploy service account has no Storage permission (and the bucket API refuses while
-      # billing is closed), so this step reports but never fails the release.
-      - name: Deploy Storage rules (best effort)
+      - name: Deploy Storage rules (needs Storage Admin; bucket API also refuses while billing is closed)
         continue-on-error: true
         run: npx --yes firebase-tools@latest deploy --only storage --project nem-customer-feedback-8d3fb --non-interactive
       - name: Remove service account file
