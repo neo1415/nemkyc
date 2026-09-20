@@ -60,8 +60,10 @@ try {
   console.error(`routes   could not build the app: ${e.message}`);
 }
 if (table) {
-  table = table.split('\n').filter((l) => l.startsWith('{')).join('\n') + '\n';
-  const baseline = fs.readFileSync(baselinePath, 'utf8');
+  // Normalise line endings: git's autocrlf rewrites the committed baseline to CRLF on checkout.
+  const normalise = (text) => text.replace(/\r\n/g, '\n');
+  table = normalise(table).split('\n').filter((l) => l.startsWith('{')).join('\n') + '\n';
+  const baseline = normalise(fs.readFileSync(baselinePath, 'utf8'));
   if (table === baseline) {
     console.log(`routes   identical to baseline (${baseline.split('\n').filter(Boolean).length} layers)`);
   } else {

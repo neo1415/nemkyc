@@ -1721,10 +1721,10 @@ app.use((req, res, next) => {
     req.path.startsWith('/api/cac-documents/') ||    // CAC document endpoints (protected by auth)
     req.path.startsWith('/api/admin/') ||    // Admin endpoints (protected by requireAuth + requireSuperAdmin)
     req.path.startsWith('/api/users/')) {    // User management endpoints (protected by requireAuth + requireSuperAdmin)
-    console.log('🔓 Skipping CSRF protection for:', req.path);
+    // Not logged: this runs on every request, and req.path carries single-use identity
+    // verification tokens (/api/identity/verify/<token>).
     return next(); // Skip CSRF for this route
   }
-  console.log('🔐 Applying CSRF protection for:', req.path);
   csrfProtection(req, res, next); // Apply CSRF protection
 });
 
