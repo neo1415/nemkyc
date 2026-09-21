@@ -104,12 +104,7 @@ const SubmissionCard: React.FC<SubmissionCardProps> = ({ submission }) => {
           <span className="text-gray-900">{formatDate(submission.submittedAt)}</span>
         </div>
 
-        {/* Form Type Icon */}
-        <div className="flex items-center gap-2 text-sm">
-          <FileText className="h-4 w-4 text-[#DAA520]" />
-          <span className="font-medium text-gray-700">Type:</span>
-          <span className="text-gray-900">{submission.collection}</span>
-        </div>
+
       </CardContent>
     </Card>
   );

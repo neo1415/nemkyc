@@ -99,6 +99,12 @@ const UserDashboard: React.FC = () => {
     return groups;
   }, [submissions]);
 
+  // Claims where the customer is the blocker; surfaced as a count so they know to look.
+  const needsYou = useMemo(
+    () => grouped.claims.filter(c => resolveClaimBlock(c).waitingOn === 'customer').length,
+    [grouped.claims],
+  );
+
   const activeClaims = useMemo(
     () => grouped.claims
       .filter(isActiveClaim)
@@ -208,40 +214,11 @@ const UserDashboard: React.FC = () => {
               <p className="text-3xl font-bold leading-none">{loading ? '—' : grouped.claims.length}</p>
               <p className="text-xs uppercase tracking-wide text-white/90 mt-1">
                 {grouped.claims.length === 1 ? 'Claim' : 'Claims'}
-                {!loading && activeClaims.length > 0 && ` · ${activeClaims.length} active`}
+                {!loading && needsYou > 0 && ` · ${needsYou} need${needsYou === 1 ? 's' : ''} you`}
               </p>
             </div>
           </div>
 
-          {!loading && activeClaims.length > 0 && (
-            <div className="mt-6" data-testid="active-claims">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-white/90 mb-3">Active claims</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {activeClaims.map(claim => (
-                  <Link
-                    key={`${claim.collection}-${claim.id}`}
-                    to={`/submission/${claim.collection}/${claim.id}`}
-                    className="block rounded-lg bg-white text-gray-900 shadow-md hover:shadow-lg transition-shadow p-4 focus:outline-none focus:ring-2 focus:ring-white"
-                    data-testid="active-claim-card"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <p className="font-semibold text-[#800020] leading-tight">{claim.formType}</p>
-                      <ArrowRight className="h-4 w-4 text-[#DAA520] shrink-0 mt-0.5" aria-hidden="true" />
-                    </div>
-                    <ClaimProgress
-                      compact
-                      doc={{
-                        claim: claim.claim,
-                        status: claim.status,
-                        submittedAt: claim.submittedAt,
-                        ticketId: claim.ticketId,
-                      }}
-                    />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Main Content with Tabs */}

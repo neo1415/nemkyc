@@ -261,7 +261,7 @@ describe('Feature: motor-claims-ux-improvements, Property 5: Submission Card Com
    * 
    * **Validates: Requirements 5.3**
    */
-  it('should display collection type for any submission', () => {
+  it('does not repeat the collection slug that the heading already conveys', () => {
     fc.assert(
       fc.property(
         submissionCardArbitrary,
@@ -274,11 +274,9 @@ describe('Feature: motor-claims-ux-improvements, Property 5: Submission Card Com
 
           const html = container.innerHTML;
 
-          // Collection should be displayed
-          expect(html).toContain(submission.collection);
-
-          // "Type:" label should be present
-          expect(html).toContain('Type:');
+          // The card heading already names the form, so the collection slug and its
+          // "Type:" label were removed as duplication.
+          expect(html).not.toContain('Type:');
         }
       ),
       { numRuns: 100 }

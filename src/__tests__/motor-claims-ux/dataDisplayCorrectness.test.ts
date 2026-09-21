@@ -274,7 +274,9 @@ describe('Property 10: Data Display Correctness', () => {
     fc.assert(
       fc.property(
         fc.oneof(
-          fc.record({ value: fc.string({ minLength: 1 }), expected: fc.constant(true) }),
+          // Whitespace-only strings are intentionally NOT displayable, so they must not be
+          // generated as expected-true cases (this test failed intermittently on " ").
+          fc.record({ value: fc.string({ minLength: 1 }).filter(v => v.trim().length > 0), expected: fc.constant(true) }),
           fc.record({ value: fc.integer(), expected: fc.constant(true) }),
           fc.record({ value: fc.constant(null), expected: fc.constant(false) }),
           fc.record({ value: fc.constant(undefined), expected: fc.constant(false) }),

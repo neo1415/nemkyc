@@ -29,14 +29,20 @@ import {
   STEP_REQUIREMENTS,
   TRANSITIONS,
   resolveClaimBlock,
+  CUSTOMER_STAGES,
 } from '@/lib/claimLifecycle';
 import { ClaimsApiError, TransitionInput, transitionClaim } from '@/services/claimsApi';
 
-/** The happy-path order of steps, used only to draw the roadmap; legality still comes from TRANSITIONS. */
-const STAFF_PATH: ClaimStep[] = [
-  'registered', 'docs_requested', 'docs_complete', 'coverage_confirmed', 'assessed',
-  'offer_issued', 'offer_accepted', 'discharged', 'payment_processed', 'payment_confirmed', 'closed',
-];
+/** What this step asks of the person moving the claim. Blank means nothing beyond the note. */
+const STAFF_HINT: Partial<Record<ClaimStep, string>> = {
+  docs_requested: 'you list what the customer must send',
+  offer_issued: 'you enter the settlement amount',
+  offer_revised: 'you enter a revised amount',
+  offer_accepted: 'the customer does this from their dashboard',
+  offer_queried: 'the customer does this from their dashboard',
+  declined: 'needs a written reason',
+  payment_processed: 'needs a payment reference',
+};
 
 export interface ClaimTransitionDialogProps {
   open: boolean;
@@ -98,6 +104,7 @@ function renderDetails(details: unknown): React.ReactNode {
 const ClaimTransitionDialog: React.FC<ClaimTransitionDialogProps> = ({ open, onClose, collection, id, doc, onUpdated }) => {
   const current = useMemo(() => resolveClaimBlock(doc), [doc]);
   const isTerminal = TERMINAL_STEPS.includes(current.step);
+  const stageNumber = Math.max(1, CUSTOMER_STAGES.indexOf(current.stage) + 1);
 
   const options = useMemo(
     () => TRANSITIONS[current.step].filter((step) => STEPS[step].actor === 'staff'),
@@ -107,6 +114,7 @@ const ClaimTransitionDialog: React.FC<ClaimTransitionDialogProps> = ({ open, onC
   const [targetStep, setTargetStep] = useState<ClaimStep | ''>('');
   const [note, setNote] = useState('');
   const [documents, setDocuments] = useState<DocumentRow[]>([emptyDocumentRow()]);
+  const offerStillAhead = !options.includes('offer_issued') && !['accept', 'pay', 'closed', 'declined'].includes(current.stage);
   const [offerAmount, setOfferAmount] = useState('');
   const [offerBasis, setOfferBasis] = useState('');
   const [offerExcess, setOfferExcess] = useState('');
@@ -234,37 +242,15 @@ const ClaimTransitionDialog: React.FC<ClaimTransitionDialogProps> = ({ open, onC
     <Dialog open={open} onClose={submitting ? undefined : onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Move claim</DialogTitle>
       <DialogContent dividers>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Current stage: <strong>{STAGE_LABELS[current.stage]}</strong> — {STEPS[current.step].label}
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Stage {stageNumber} of {CUSTOMER_STAGES.length} · <strong>{STAGE_LABELS[current.stage]}</strong> — {STEPS[current.step].label}
         </Typography>
 
-        {/* The whole road ahead, so staff can see where the settlement offer (amount) is entered. */}
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-            Full path
+        {offerStillAhead && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            The settlement amount is entered later, at the “Settlement offer issued” step.
           </Typography>
-          <Typography variant="body2" component="div" sx={{ lineHeight: 1.8 }}>
-            {STAFF_PATH.map((step, index) => {
-              const state = STAFF_PATH.indexOf(current.step) > index ? 'done' : step === current.step ? 'current' : 'todo';
-              return (
-                <span key={step} style={{ whiteSpace: 'nowrap' }}>
-                  <span style={{
-                    fontWeight: state === 'current' ? 700 : 400,
-                    color: state === 'todo' ? '#8c8285' : state === 'current' ? '#8E1B2C' : '#2F6B45',
-                  }}>
-                    {state === 'done' ? '✓ ' : ''}{STEPS[step].label}
-                    {step === 'offer_issued' ? ' (amount entered here)' : ''}
-                    {STEPS[step].actor === 'customer' ? ' (customer)' : ''}
-                  </span>
-                  {index < STAFF_PATH.length - 1 ? <span style={{ color: '#8c8285' }}> → </span> : null}
-                </span>
-              );
-            })}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            "Claim declined" is available at every step up to the offer. The customer accepts or queries the offer from their dashboard; a query lets you issue a revised offer.
-          </Typography>
-        </Box>
+        )}
 
         {isTerminal ? (
           <Alert severity="info">
@@ -284,7 +270,7 @@ const ClaimTransitionDialog: React.FC<ClaimTransitionDialogProps> = ({ open, onC
                       <Box>
                         <Typography variant="body1">{STEPS[step].label}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {STAGE_LABELS[STEPS[step].stage]} · {STEPS[step].customer}
+                          {STAGE_LABELS[STEPS[step].stage]}{STAFF_HINT[step] ? ` · ${STAFF_HINT[step]}` : ''}
                         </Typography>
                       </Box>
                     }

@@ -71,32 +71,18 @@ describe('UserDashboard', () => {
     vi.clearAllMocks();
   });
 
-  it('shows only claims in the header: the claims count and one compact tracker per active claim, newest first', async () => {
+  it('summarises claims in the header without repeating the list below', async () => {
     renderDashboard();
+    await screen.findByTestId('family-tab-claims');
 
-    const activeCards = await screen.findAllByTestId('active-claim-card');
-    expect(screen.getByTestId('claims-count')).toHaveTextContent('4');
-    expect(screen.getByTestId('claims-count')).toHaveTextContent('2 active');
+    // The header is a summary only: total claims, and how many are waiting on the customer.
+    const count = screen.getByTestId('claims-count');
+    expect(count).toHaveTextContent('4');
+    expect(count).toHaveTextContent('1 needs you');
 
-    // Closed and declined claims, and every compliance form, stay out of the header
-    expect(activeCards).toHaveLength(2);
-    expect(activeCards[0]).toHaveTextContent('Motor Claim');
-    expect(activeCards[0]).toHaveAttribute('href', '/submission/motor-claims/m1');
-    expect(activeCards[1]).toHaveTextContent('Fire Special Perils Claim');
-    expect(activeCards[1]).toHaveAttribute('href', '/submission/fire-special-perils-claims/f1');
-
-    const header = screen.getByTestId('active-claims');
-    expect(header).not.toHaveTextContent('Burglary Claim');
-    expect(header).not.toHaveTextContent('All Risk Claim');
-    expect(header).not.toHaveTextContent('Individual KYC');
-    expect(header).not.toHaveTextContent('Agents CDD');
-    expect(header).not.toHaveTextContent('Individual NFIU');
-
-    // Compact trackers carry the stage and waiting chip
-    expect(within(activeCards[0]).getByTestId('claim-progress')).toHaveAttribute('data-stage', 'review');
-    expect(within(activeCards[0]).getByTestId('claim-waiting-chip')).toHaveTextContent('With NEM');
-    expect(within(activeCards[1]).getByTestId('claim-progress')).toHaveAttribute('data-stage', 'accept');
-    expect(within(activeCards[1]).getByTestId('claim-waiting-chip')).toHaveTextContent('Waiting on you');
+    // The old per-claim cards in the header are gone; the Claims tab is the single list.
+    expect(screen.queryByTestId('active-claims')).toBeNull();
+    expect(screen.queryAllByTestId('active-claim-card')).toHaveLength(0);
 
     // The old analytics tiles are gone
     expect(screen.queryByText(/Total Submissions/i)).toBeNull();
@@ -104,7 +90,7 @@ describe('UserDashboard', () => {
 
   it('groups submissions into Claims, KYC, CDD and NFIU tabs', async () => {
     renderDashboard();
-    await screen.findAllByTestId('active-claim-card');
+    await screen.findByTestId('family-tab-claims');
 
     // Claims tab is the default and lists every claim, including closed and declined ones
     const claimCards = cardsIn('claims');
@@ -134,7 +120,7 @@ describe('UserDashboard', () => {
 
   it('keeps the profile tab', async () => {
     renderDashboard();
-    await screen.findAllByTestId('active-claim-card');
+    await screen.findByTestId('family-tab-claims');
     expect(screen.getByRole('tab', { name: /Profile & Settings/i })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Identity Collection/i })).toBeNull();
     expect(screen.getByText('Welcome, Ada Lovelace!')).toBeInTheDocument();

@@ -12,6 +12,7 @@ import {
   type ClaimBlock,
   type ClaimStage,
   type WaitingOn,
+  type ClaimStep,
 } from '@/lib/claimLifecycle';
 
 export interface ClaimProgressDoc {
@@ -64,11 +65,23 @@ const formatDays = (days: number | null): string | null => {
   return `Notified ${days} days ago`;
 };
 
+/**
+ * Card copy. Only rendered when the customer has to do something — when the claim is with NEM
+ * the rail and the "With NEM" chip already say everything, and a sentence per card just makes
+ * a long list unreadable.
+ */
+const CUSTOMER_ACTION: Partial<Record<ClaimStep, string>> = {
+  docs_requested: 'Documents needed from you',
+  offer_issued: 'Offer ready — accept or query',
+  offer_revised: 'Revised offer — accept or query',
+};
+
 const ClaimProgress: React.FC<ClaimProgressProps> = ({ doc, compact = false, className }) => {
   const claim = resolveClaimBlock(doc);
   const declined = claim.stage === 'declined';
   const closed = claim.stage === 'closed';
   const step = STEPS[claim.step];
+  const actionLine = claim.waitingOn === 'customer' ? CUSTOMER_ACTION[claim.step] ?? step.customer : '';
   const chip = declined
     ? { label: 'Declined', className: 'bg-red-100 text-red-900 border-red-300' }
     : closed
@@ -174,9 +187,12 @@ const ClaimProgress: React.FC<ClaimProgressProps> = ({ doc, compact = false, cla
         )}
       </div>
 
-      {!declined && (
-        <p className={cn('text-gray-700', compact ? 'mt-1 text-xs line-clamp-2' : 'mt-2 text-sm')} data-testid="claim-step-text">
-          {step.customer}
+      {!declined && (compact ? actionLine : step.customer) && (
+        <p
+          className={cn('text-gray-700', compact ? 'mt-1 text-xs font-medium text-[#8E1B2C]' : 'mt-2 text-sm')}
+          data-testid="claim-step-text"
+        >
+          {compact ? actionLine : step.customer}
         </p>
       )}
     </div>

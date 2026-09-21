@@ -51,7 +51,8 @@ describe('ClaimProgress', () => {
     expect(screen.getByTestId('claim-stage-accept')).toHaveAttribute('data-state', 'current');
     expect(screen.getByTestId('claim-stage-pay')).toHaveAttribute('data-state', 'upcoming');
     expect(screen.getByTestId('claim-waiting-chip')).toHaveTextContent('Waiting on you');
-    expect(screen.getByTestId('claim-step-text')).toHaveTextContent(STEPS.offer_issued.customer);
+    // Compact cards carry a short action line, not the full customer sentence.
+    expect(screen.getByTestId('claim-step-text')).toHaveTextContent('Offer ready');
     expect(screen.getByTestId('claim-days')).toHaveTextContent('Notified 3 days ago');
   });
 
