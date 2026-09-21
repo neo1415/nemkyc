@@ -27,6 +27,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.CSRF_SECRET) {
 }
 
 const claimLifecycle = require('./src/lib/claimLifecycle.cjs');
+const emailSuppression = require('./src/lib/emailSuppression.cjs');
 
 const {
   CUSTOMER_FORM_CONFIGS,
@@ -2313,8 +2314,11 @@ const testEmailConnection = async () => {
   }
 };
 try {
-  transporter = createEmailTransporter();
+  // wrapTransport is a no-op unless EMAIL_SUPPRESS_PATTERN is set; wrapping here covers every
+  // sendMail call in the codebase, including routes that use the transport directly.
+  transporter = emailSuppression.wrapTransport(createEmailTransporter());
   console.log('✅ Email transporter initialized successfully');
+  emailSuppression.announce();
   
   // Test the connection
   setTimeout(() => {
@@ -2325,11 +2329,11 @@ try {
   console.error('❌ Failed to initialize email transporter:', error.message);
   console.error('📧 Email functionality will not work until configuration is fixed');
   // Create a dummy transporter that logs errors
-  transporter = {
+  transporter = emailSuppression.wrapTransport({
     sendMail: async () => {
       throw new Error('Email transporter not configured. Check EMAIL_USER and EMAIL_PASS environment variables.');
     }
-  };
+  });
 }
 
 require('./src/routes/email.cjs')(app, ctx);

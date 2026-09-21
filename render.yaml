@@ -93,6 +93,11 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      # ---- Email suppression (TESTING ONLY) ----
+      # Deliberately NOT declared here so a deploy can never turn it on by accident.
+      # To test without mailing NEM staff: add EMAIL_SUPPRESS_PATTERN=nem-insurance in the
+      # Render dashboard (Environment tab). To reverse: delete that variable. Both trigger a
+      # restart. While active the service logs a loud banner on every boot.
       # ---- Google Document AI (secret file uploaded in the dashboard at this path) ----
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /etc/secrets/google-cloud-credentials.json
