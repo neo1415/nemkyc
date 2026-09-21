@@ -39,6 +39,10 @@ export default defineConfig(() => ({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Heavy MUI/dialog renders intermittently exceed vitest's 5s default when files run in
+    // parallel, which made CI red at random. The tests themselves are fast; this is headroom.
+    testTimeout: 30000,
+    hookTimeout: 30000,
     // CI has no VITE_* secrets; src/firebase/config.ts calls getAuth() at import time and
     // throws auth/invalid-api-key when the key is undefined. Tests never hit the network.
     env: {

@@ -18,7 +18,7 @@ class DefinitiveRejection extends Error {}
 const DEFINITIVE_ERROR_CODES = new Set(['VERIFICATION_FAILED', 'UNSUPPORTED_FORMAT', 'FILE_TOO_LARGE', 'CORRUPTED_FILE', 'INVALID_DOCUMENT_TYPE']);
 
 const isClientSideRejection = (message: string) =>
-  /invalid|unsupported|format|too large|corrupt|password|not the requested|wrong document|does not appear to be|not a valid/i.test(message);
+  /invalid|unsupported|format|too large|corrupt|password|not the requested|wrong document|does not appear to be|not a valid|could not read|unreadable|could not extract text/i.test(message);
 import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { documentProcessor } from '../../services/geminiDocumentProcessor';
 import { formSubmissionController } from '../../services/geminiFormSubmissionController';

@@ -120,14 +120,21 @@ app.post('/api/document-ai/process', verificationRateLimiter, async (req, res) =
     const errorCode = error.code || error.status || 'DOCUMENT_PROCESSING_ERROR';
     const isCapacityError = errorCode === 8 || errorCode === 429 ||
       /quota|resource_exhausted|rate limit/i.test(error.message || '');
-    const isConfigurationError = [3, 5, 7, 16, 401, 403, 404].includes(errorCode) ||
-      /credential|permission|processor.*not found|unauthenticated/i.test(error.message || '');
-    const statusCode = isCapacityError ? 429 : (isConfigurationError ? 503 : 500);
+    // gRPC 3 = INVALID_ARGUMENT: Document AI read the request fine and rejected the FILE
+    // (corrupt, unsupported, unreadable). That is the customer's to fix, so it must be a 400 —
+    // not a 503, which the client treats as a transient outage and retries into "inconclusive".
+    const isBadDocument = errorCode === 3 ||
+      /invalid.*argument|unsupported.*(format|mime)|corrupt|cannot.*parse|page.*limit|too.*large/i.test(error.message || '');
+    const isConfigurationError = !isBadDocument && ([5, 7, 16, 401, 403, 404].includes(errorCode) ||
+      /credential|permission|processor.*not found|unauthenticated/i.test(error.message || ''));
+    const statusCode = isCapacityError ? 429 : isBadDocument ? 400 : (isConfigurationError ? 503 : 500);
     const customerMessage = isCapacityError
       ? 'Document verification is temporarily busy. Please wait a few minutes and try again.'
-      : isConfigurationError
-        ? 'Document verification is temporarily unavailable. Please try again later or contact support.'
-        : 'We could not read this document. Please upload a clear PDF, JPG, or PNG and try again.';
+      : isBadDocument
+        ? 'We could not read this document. Please upload a clear PDF, JPG, or PNG and try again.'
+        : isConfigurationError
+          ? 'Document verification is temporarily unavailable. Please try again later or contact support.'
+          : 'We could not read this document. Please upload a clear PDF, JPG, or PNG and try again.';
 
     console.error('Document AI endpoint error:', { code: errorCode, message: error.message });
     res.status(statusCode).json({
