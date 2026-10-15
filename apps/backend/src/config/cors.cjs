@@ -26,7 +26,7 @@ const allowedOrigins = [
   'https://nem-kyc.firebaseapp.com',
   
   // Backend server
-  'https://nem-server-rhdb.onrender.com',
+  'https://nem-server-rhdb-production.up.railway.app',
 ];
 
 // Optional: Add environment-specific origins

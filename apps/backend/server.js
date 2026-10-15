@@ -718,7 +718,7 @@ app.use(helmet.contentSecurityPolicy({
     scriptSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline only if absolutely necessary
     imgSrc: ["'self'", "data:", "https:"],
-    connectSrc: ["'self'", "https://nem-server-rhdb.onrender.com", "https://identitytoolkit.googleapis.com"],
+    connectSrc: ["'self'", "https://nem-server-rhdb-production.up.railway.app", "https://identitytoolkit.googleapis.com"],
     fontSrc: ["'self'"],
     objectSrc: ["'none'"],
     mediaSrc: ["'self'"],

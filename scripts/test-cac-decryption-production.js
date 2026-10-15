@@ -14,7 +14,7 @@ async function testCACDecryption() {
   
   const endpoints = [
     `${window.location.origin}/api/cac-documents/decrypt`,
-    'https://nem-server-rhdb.onrender.com/api/cac-documents/decrypt',
+    'https://nem-server-rhdb-production.up.railway.app/api/cac-documents/decrypt',
     '/api/cac-documents/decrypt'
   ];
   
