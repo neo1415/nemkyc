@@ -16,7 +16,7 @@
     "follow-redirects": ">=1.16.0",
     "rollup": ">=4.30.1",
     "uuid": ">=11.0.5",
-    "@grpc/grpc-js": "1.14.4"
+    "@grpc/grpc-js": "1.14.6"
   },
   "scripts": {
     "dev": "vite --configLoader runner",
