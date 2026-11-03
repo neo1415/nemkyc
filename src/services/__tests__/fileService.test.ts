@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { uploadFile } from '../fileService';
 
+// The guest session is a separate request; these tests count upload calls only.
+vi.mock('../../utils/guestSession', () => ({ getGuestSessionHeaders: vi.fn().mockResolvedValue({}) }));
+
 describe('shared customer document upload', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

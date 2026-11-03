@@ -2,6 +2,7 @@
 
 // Node's crypto module: the `crypto` global is WebCrypto and has no randomBytes/createHash.
 const crypto = require('crypto');
+const { escapeHtml } = require('../../server-utils/emailTemplates.cjs');
 
 /**
  * Customer form submissions and staff form data access. Extracted verbatim from server.js.
@@ -14,6 +15,24 @@ const crypto = require('crypto');
  *                        lifecycle and events modules registered in their original positions),
  *                        multi-collection listing, deletion and PDF download logging
  */
+
+/** Storage folders customers upload into (and the only ones a customer may download from). */
+function customerUploadRoots(getAllClaimCollections) {
+  return new Set([
+    'individual-kyc', 'corporate-kyc',
+    'individual-cdd', 'corporate-cdd', 'naicom-corporate-cdd',
+    'partners-cdd', 'naicom-partners-cdd', 'agents-cdd', 'brokers-cdd',
+    'individual-nfiu', 'corporate-nfiu',
+    'combined-gpa-employers-liability-claims', 'motor-claims', 'burglary-claims',
+    'fire-special-perils-claims', 'all-risk-claims', 'goods-in-transit-claims',
+    'money-insurance-claims', 'employers-liability-claims', 'public-liability-claims',
+    'professional-indemnity-claims', 'fidelity-guarantee-claims', 'contractors-claims',
+    'group-personal-accident-claims', 'rent-assurance-claims',
+    // Keep uploads aligned with the canonical claims registry so new and existing
+    // Smart, Home, and agricultural claim forms cannot fail at the upload boundary.
+    ...getAllClaimCollections()
+  ]);
+}
 
 module.exports = function register(app, ctx) {
   const {
@@ -42,6 +61,7 @@ module.exports = function register(app, ctx) {
     publicUploadLimiter,
     requireAuth,
     requireAuthOrGuest,
+    guestProtection,
     requireCompliance,
     requireSuperAdmin,
     resolveClaimFormConfig,
@@ -519,25 +539,12 @@ async function buildSetPasswordLink(email) {
   });
 }
 
-const ALLOWED_PUBLIC_UPLOAD_ROOTS = new Set([
-  'individual-kyc', 'corporate-kyc',
-  'individual-cdd', 'corporate-cdd', 'naicom-corporate-cdd',
-  'partners-cdd', 'naicom-partners-cdd', 'agents-cdd', 'brokers-cdd',
-  'individual-nfiu', 'corporate-nfiu',
-  'combined-gpa-employers-liability-claims', 'motor-claims', 'burglary-claims',
-  'fire-special-perils-claims', 'all-risk-claims', 'goods-in-transit-claims',
-  'money-insurance-claims', 'employers-liability-claims', 'public-liability-claims',
-  'professional-indemnity-claims', 'fidelity-guarantee-claims', 'contractors-claims',
-  'group-personal-accident-claims', 'rent-assurance-claims',
-  // Keep uploads aligned with the canonical claims registry so new and existing
-  // Smart, Home, and agricultural claim forms cannot fail at the upload boundary.
-  ...getAllClaimCollections()
-]);
+const ALLOWED_PUBLIC_UPLOAD_ROOTS = customerUploadRoots(getAllClaimCollections);
 
 // Upload customer documents through the backend so Firebase Storage can deny
 // anonymous writes. Return an internal gs:// reference instead of issuing a
 // permanent bearer download token.
-app.post('/api/public/upload', publicUploadLimiter, upload.single('file'), async (req, res) => {
+app.post('/api/public/upload', publicUploadLimiter, guestProtection.requireHumanCheck, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'A document is required' });
@@ -578,7 +585,7 @@ app.post('/api/public/upload', publicUploadLimiter, upload.single('file'), async
 // Centralized form submission endpoint with event logging
 // Public for the customer-facing KYC/CDD forms; all other forms still require authentication.
 // ✅ VALIDATED: Input validation applied
-app.post('/api/submit-form', publicFormSubmissionLimiter, guestProvisionLimiter, requireAuthOrGuest, validateFormSubmission, sanitizeHtmlFields, async (req, res) => {
+app.post('/api/submit-form', publicFormSubmissionLimiter, guestProvisionLimiter, requireAuthOrGuest, guestProtection.requireHumanCheck, validateFormSubmission, sanitizeHtmlFields, async (req, res) => {
   const requestId = req.headers['x-request-id'] || uuidv4();
   console.log('Form submission received:', {
     requestId,
@@ -958,7 +965,11 @@ const getFirestoreCollection = (formType) => {
 };
 
 // Helper functions for email HTML generation
-const generateConfirmationEmailHTML = (formType, ticketId, userName = 'Valued Customer') => {
+const generateConfirmationEmailHTML = (rawFormType, ticketId, rawUserName = 'Valued Customer') => {
+  // Name and form type come from the request body; escape so a submission cannot inject markup
+  // (phishing links) into mail sent from NEM's own address.
+  const formType = escapeHtml(rawFormType);
+  const userName = escapeHtml(rawUserName);
   const dashboardUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
   const customerDashboardLink = buildCustomerDashboardLink(dashboardUrl);
   return `
@@ -999,7 +1010,11 @@ const generateConfirmationEmailHTML = (formType, ticketId, userName = 'Valued Cu
   `;
 };
 
-const generateAdminNotificationHTML = (formType, formData, documentId, ticketId, submitterName, submitterEmail, collectionName) => {
+const generateAdminNotificationHTML = (rawFormType, formData, documentId, ticketId, rawSubmitterName, rawSubmitterEmail, collectionName) => {
+  const formType = escapeHtml(rawFormType);
+  const submitterName = rawSubmitterName ? escapeHtml(rawSubmitterName) : '';
+  const submitterEmail = rawSubmitterEmail ? escapeHtml(rawSubmitterEmail) : '';
+  const phone = escapeHtml(formData?.phone || formData?.phoneNumber || 'N/A');
   const adminDashboardUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
   const reviewUrl = buildAdminSubmissionDeepLink(collectionName, documentId, adminDashboardUrl);
   return `
@@ -1031,7 +1046,7 @@ const generateAdminNotificationHTML = (formType, formData, documentId, ticketId,
           </tr>
           <tr>
             <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #666;">Phone:</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${formData?.phone || formData?.phoneNumber || 'N/A'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${phone}</td>
           </tr>
         </table>
         
@@ -1063,6 +1078,7 @@ module.exports.dataRoutes = function dataRoutes(app, ctx) {
   const {
     admin,
     db,
+    getAllClaimCollections,
     getLocationFromIP,
     getStorage,
     getUserDetailsForLogging,
@@ -1169,6 +1185,8 @@ app.get('/api/forms/:collection', requireAuth, requireClaims, async (req, res) =
   }
 });
 
+const ALLOWED_PUBLIC_UPLOAD_ROOTS = customerUploadRoots(getAllClaimCollections);
+
 const resolveManagedStorageObject = (storedValue, expectedBucketName) => {
   const rawValue = typeof storedValue === 'string' ? storedValue : storedValue?.url;
   if (!rawValue || typeof rawValue !== 'string') return null;
@@ -1245,6 +1263,12 @@ app.get('/api/forms/:collection/:id/documents/:field', requireAuth, async (req, 
     const bucket = getStorage().bucket();
     const objectName = resolveManagedStorageObject(submissionData[field], bucket.name);
     if (!objectName || objectName.includes('\0')) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    // formData is stored as the customer sent it, so a customer could plant any gs:// path in their
+    // own submission. Customers may only fetch objects under the customer upload folders.
+    const objectRoot = objectName.split('/')[0].trim().toLowerCase();
+    if (!staffRoles.has(req.user.role) && !ALLOWED_PUBLIC_UPLOAD_ROOTS.has(objectRoot)) {
       return res.status(404).json({ error: 'Document not found' });
     }
 

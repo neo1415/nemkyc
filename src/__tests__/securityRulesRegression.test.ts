@@ -15,6 +15,21 @@ describe('deployed Firebase security rules', () => {
     );
   });
 
+  it('leaves submission writes to the backend and status changes to staff', () => {
+    const submissionRules = firestoreRules.slice(
+      firestoreRules.indexOf('// ========== KYC & CDD Collections =========='),
+      firestoreRules.indexOf('match /identity-lists/'),
+    );
+    const blocks = submissionRules.split(/\n\s*match \//).slice(1);
+    expect(blocks.length).toBeGreaterThan(40);
+    for (const block of blocks) {
+      const name = block.slice(0, block.indexOf('/'));
+      // A customer could otherwise forge a claim for someone else, or set their own status/offer.
+      expect(block, name).toMatch(/allow create: if false;/);
+      expect(block.match(/allow update:[^;]*;/)?.[0] ?? '', name).not.toContain('isOwner');
+    }
+  });
+
   it('prevents users from promoting their own userroles document or widening claim scope', () => {
     expect(firestoreRules).toContain(
       "affectedKeys().hasAny(['role', 'email', 'uid', 'createdBy', 'createdAt', 'claimAccessAll', 'assignedClaimCollections', 'disabled', 'mustChangePassword'])",

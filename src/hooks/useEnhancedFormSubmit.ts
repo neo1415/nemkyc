@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { matchCACData, matchNINData, normalizeNINVerificationData } from '../utils/verificationMatcher';
 import { getCSRFToken } from '../utils/csrfToken';
+import { getGuestSessionHeaders } from '../utils/guestSession';
 import {
   describeReattachFields,
   mergePendingFormData,
@@ -97,6 +98,8 @@ const makeAuthenticatedRequest = async (
 
   if (firebaseUser) {
     headers.Authorization = `Bearer ${await firebaseUser.getIdToken()}`;
+  } else {
+    Object.assign(headers, await getGuestSessionHeaders());
   }
 
   return fetch(url, {
@@ -121,27 +124,88 @@ const getResponseErrorMessage = async (response: Response, fallback: string): Pr
   return errorData.message || errorData.error || fallback;
 };
 
-// Helper function to verify identity number (NIN or CAC)
-const verifyIdentity = async (identityNumber: string, identityType: 'NIN' | 'CAC', user?: any) => {
-  const endpoint = identityType === 'NIN' 
+type IdentityMatch = { matches: boolean; mismatches: string[]; warnings: string[] };
+
+type IdentityCheckOutcome =
+  | { kind: 'matched'; match: IdentityMatch; data?: any }
+  | { kind: 'mismatch'; match: IdentityMatch }
+  // The check could not run (provider outage, limit, network). Never the customer's fault, so the
+  // submission goes through flagged for manual review instead of being lost.
+  | { kind: 'unavailable'; reason: string };
+
+/** What the customer typed, in the shape the backend matcher expects. */
+const enteredIdentityDetails = (formData: any, identityType: 'NIN' | 'CAC') =>
+  identityType === 'NIN'
+    ? {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+      }
+    : {
+        companyName: formData.insured || formData.companyName,
+        registrationDate: formData.dateOfIncorporationRegistration || formData.incorporationDate,
+        address: formData.officeAddress || formData.registeredCompanyAddress || formData.registeredAddress || formData.companyAddress,
+      };
+
+/**
+ * Checks the NIN/RC number against the registry. The backend compares it with what the customer
+ * typed and, for guests, returns only the verdict; registry data never reaches the browser.
+ * Throws only for problems the customer can fix (e.g. an invalid number).
+ */
+const checkIdentity = async (
+  identityNumber: string,
+  identityType: 'NIN' | 'CAC',
+  formData: any,
+  firebaseUser?: FirebaseUser | null,
+): Promise<IdentityCheckOutcome> => {
+  const endpoint = identityType === 'NIN'
     ? `${API_BASE_URL}/api/autofill/verify-nin`
     : `${API_BASE_URL}/api/autofill/verify-cac`;
-  
+  const entered = enteredIdentityDetails(formData, identityType);
   const payload = identityType === 'NIN'
-    ? { nin: identityNumber, userId: user?.uid || 'anonymous', userName: user?.displayName, userEmail: user?.email }
-    : { rc_number: identityNumber, userId: user?.uid || 'anonymous', userName: user?.displayName, userEmail: user?.email };
+    ? { nin: identityNumber, match: entered, formId: 'submission-check' }
+    : { rc_number: identityNumber, match: entered, formId: 'submission-check' };
 
-  const response = await makeAuthenticatedRequest(endpoint, payload, 'POST', true);
-  
+  let response: Response;
+  try {
+    const authHeader: Record<string, string> = firebaseUser
+      ? { Authorization: `Bearer ${await firebaseUser.getIdToken()}` }
+      : await getGuestSessionHeaders();
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { kind: 'unavailable', reason: 'network error' };
+  }
+
+  if (response.status === 429 || response.status >= 500) {
+    return { kind: 'unavailable', reason: response.status === 429 ? 'rate limited' : `service error ${response.status}` };
+  }
   if (!response.ok) {
     throw new Error(await getResponseErrorMessage(response, `${identityType} verification failed. Please check the number and try again.`));
   }
-  
-  const result = await response.json();
-  if (identityType === 'NIN' && result?.data) {
-    result.data = normalizeNINVerificationData(result.data);
+
+  const result = await response.json().catch(() => null);
+  if (!result?.status) {
+    return { kind: 'unavailable', reason: result?.message || 'no result' };
   }
-  return result;
+
+  let match: IdentityMatch | undefined = result.match;
+  if (!match && result.data) {
+    // Older backend that still returns the record instead of a verdict.
+    match = identityType === 'NIN'
+      ? matchNINData(entered, normalizeNINVerificationData(result.data))
+      : matchCACData(
+          { insured: entered.companyName, dateOfIncorporationRegistration: entered.registrationDate, officeAddress: entered.address },
+          result.data,
+        );
+  }
+  if (!match) return { kind: 'unavailable', reason: 'no verdict' };
+  return match.matches ? { kind: 'matched', match, data: result.data } : { kind: 'mismatch', match };
 };
 
 type PendingSubmissionState = 'ready' | 'needs-review';
@@ -275,6 +339,36 @@ export const useEnhancedFormSubmit = (
   // Ref to prevent duplicate submissions
   const isSubmittingRef = useRef(false);
 
+  /**
+   * Runs the submit-time NIN/CAC check. Returns the payload to submit, or null when the customer
+   * has to correct a mismatch (the mismatch dialog is then showing).
+   */
+  const applyIdentityCheck = async (payload: any, identityNumber: string, identityType: 'NIN' | 'CAC') => {
+    const outcome = await checkIdentity(identityNumber, identityType, payload, firebaseUser);
+    if (outcome.kind === 'mismatch') {
+      markPendingSubmissionForReview();
+      setVerificationMismatchData({
+        mismatches: outcome.match.mismatches,
+        warnings: outcome.match.warnings,
+        identityType,
+      });
+      setShowVerificationMismatch(true);
+      onError?.(new Error('Verification data mismatch'));
+      return null;
+    }
+    if (outcome.kind === 'unavailable') {
+      console.warn(`${identityType} check unavailable (${outcome.reason}); submitting for manual review`);
+      return {
+        ...payload,
+        verified: false,
+        reviewRequired: true,
+        reviewReasons: [...(payload.reviewReasons || []), `${identityType} check not completed (${outcome.reason})`],
+      };
+    }
+    outcome.match.warnings.forEach((warning) => toast.warning(warning));
+    return { ...payload, ...(outcome.data ? { verificationData: outcome.data } : {}), verified: true };
+  };
+
   // Reset submission guard when summary dialog closes
   useEffect(() => {
     if (!showSummary && !isSubmitting) {
@@ -354,85 +448,11 @@ export const useEnhancedFormSubmit = (
             setIsSubmitting(true);
 
             try {
-              console.log(`🔍 Verifying ${currentIdentityType}: ${currentIdentityNumber}`);
-              
-              // Verify the identity number
-              const verificationResult = await verifyIdentity(
-                currentIdentityNumber!,
-                currentIdentityType!,
-                user
-              );
-
-              if (!verificationResult.status) {
-                throw new Error(verificationResult.message || 'Identity verification failed');
-              }
-
-              console.log('✅ Verification successful:', verificationResult);
-
-              // Perform data matching to ensure user-entered data matches verification
-              let matchResult;
-              if (currentIdentityType === 'CAC') {
-                console.log('🔍 Matching CAC data:');
-                console.log('  User entered:', {
-                  insured: savedFormData.insured || savedFormData.companyName,
-                  dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration || savedFormData.incorporationDate,
-                  officeAddress: savedFormData.officeAddress || savedFormData.registeredCompanyAddress || savedFormData.registeredAddress || savedFormData.companyAddress
-                });
-                console.log('  Verification data:', verificationResult.data);
-                
-                matchResult = matchCACData(
-                  {
-                    insured: savedFormData.insured || savedFormData.companyName,
-                    dateOfIncorporationRegistration: savedFormData.dateOfIncorporationRegistration || savedFormData.incorporationDate,
-                    officeAddress: savedFormData.officeAddress || savedFormData.registeredCompanyAddress || savedFormData.registeredAddress || savedFormData.companyAddress
-                  },
-                  verificationResult.data
-                );
-                
-                console.log('  Match result:', matchResult);
-              } else if (currentIdentityType === 'NIN') {
-                matchResult = matchNINData(
-                  {
-                    firstName: savedFormData.firstName,
-                    lastName: savedFormData.lastName,
-                    dateOfBirth: savedFormData.dateOfBirth,
-                    gender: savedFormData.gender
-                  },
-                  verificationResult.data
-                );
-              }
-
-              // Check for mismatches
-              if (matchResult && !matchResult.matches) {
-                console.log('❌ Verification data mismatch:', matchResult.mismatches);
-                markPendingSubmissionForReview();
+              const enrichedFormData = await applyIdentityCheck(savedFormData, currentIdentityNumber!, currentIdentityType!);
+              if (!enrichedFormData) {
                 setIsSubmitting(false);
-                
-                // Show verification mismatch modal
-                setVerificationMismatchData({
-                  mismatches: matchResult.mismatches,
-                  warnings: matchResult.warnings,
-                  identityType: currentIdentityType!
-                });
-                setShowVerificationMismatch(true);
-                
-                onError?.(new Error('Verification data mismatch'));
                 return;
               }
-
-              // Show warnings if any
-              if (matchResult && matchResult.warnings.length > 0) {
-                matchResult.warnings.forEach((warning: string) => {
-                  toast.warning(warning);
-                });
-              }
-
-              // Verification succeeded, add verification data to formData
-              const enrichedFormData = {
-                ...savedFormData,
-                verificationData: verificationResult.data,
-                verified: true
-              };
 
               // Now proceed with form submission
               setLoadingMessage('Processing your submission...');
@@ -705,87 +725,12 @@ export const useEnhancedFormSubmit = (
       setIsSubmitting(true);
 
       try {
-        console.log(`🔍 Verifying ${currentIdentityType}: ${currentIdentityNumber}`);
-        
-        // Verify the identity number
-        const verificationResult = await verifyIdentity(
-          currentIdentityNumber!,
-          currentIdentityType!,
-          user
-        );
-
-        if (!verificationResult.status) {
-          throw new Error(verificationResult.message || 'Identity verification failed');
-        }
-
-        console.log('✅ Verification successful:', verificationResult);
-
-        // Perform data matching to ensure user-entered data matches verification
-        let matchResult;
-        if (currentIdentityType === 'CAC') {
-          console.log('🔍 Matching CAC data (confirmSubmit):');
-          console.log('  User entered:', {
-            insured: submissionFormData.insured || submissionFormData.companyName,
-            dateOfIncorporationRegistration: submissionFormData.dateOfIncorporationRegistration || submissionFormData.incorporationDate,
-            officeAddress: submissionFormData.officeAddress || submissionFormData.registeredCompanyAddress || submissionFormData.registeredAddress || submissionFormData.companyAddress
-          });
-          console.log('  Verification data:', verificationResult.data);
-          
-          matchResult = matchCACData(
-            {
-              insured: submissionFormData.insured || submissionFormData.companyName,
-              dateOfIncorporationRegistration: submissionFormData.dateOfIncorporationRegistration || submissionFormData.incorporationDate,
-              officeAddress: submissionFormData.officeAddress || submissionFormData.registeredCompanyAddress || submissionFormData.registeredAddress || submissionFormData.companyAddress
-            },
-            verificationResult.data
-          );
-          
-          console.log('  Match result:', matchResult);
-        } else if (currentIdentityType === 'NIN') {
-          matchResult = matchNINData(
-            {
-              firstName: submissionFormData.firstName,
-              lastName: submissionFormData.lastName,
-              dateOfBirth: submissionFormData.dateOfBirth,
-              gender: submissionFormData.gender
-            },
-            verificationResult.data
-          );
-        }
-
-        // Check for mismatches
-        if (matchResult && !matchResult.matches) {
-          markPendingSubmissionForReview();
-          console.log('❌ Verification data mismatch:', matchResult.mismatches);
+        const enrichedFormData = await applyIdentityCheck(submissionFormData, currentIdentityNumber!, currentIdentityType!);
+        if (!enrichedFormData) {
           setIsSubmitting(false);
           isSubmittingRef.current = false;
-          
-          // Show verification mismatch modal
-          setVerificationMismatchData({
-            mismatches: matchResult.mismatches,
-            warnings: matchResult.warnings,
-            identityType: currentIdentityType!
-          });
-          setShowVerificationMismatch(true);
-          
-          onError?.(new Error('Verification data mismatch'));
           return;
         }
-
-        // Show warnings if any
-        if (matchResult && matchResult.warnings.length > 0) {
-          matchResult.warnings.forEach((warning: string) => {
-            toast.warning(warning);
-          });
-        }
-
-        // Verification succeeded, add verification data to formData
-        const enrichedFormData = {
-          ...submissionFormData,
-          verificationData: verificationResult.data,
-          verified: true
-        };
-
         // Now proceed with form submission
         setLoadingMessage('Submitting your form...');
         const outcome = await postSubmission(enrichedFormData);

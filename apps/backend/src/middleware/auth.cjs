@@ -334,6 +334,16 @@ const requireAuthOrGuest = (req, res, next) => {
   return requireAuth(req, res, next);
 };
 
+/** Attaches req.user when credentials are sent; requests without any continue as guests. */
+const optionalAuth = (req, res, next) => {
+  const hasCredentials = Boolean(req.cookies?.__session) || Boolean(req.headers.authorization);
+  if (!hasCredentials) {
+    req.user = null;
+    return next();
+  }
+  return requireAuth(req, res, next);
+};
+
 const requireRole = (...allowedRoles) => {
   const middleware = (req, res, next) => {
     if (!req.user) {
@@ -482,6 +492,7 @@ const requireOwnerOrAdmin = async (req, res, next) => {
     requireAdmin,
     requireAuth,
     requireAuthOrGuest,
+    optionalAuth,
     requireBrokerOrAdmin,
     requireClaims,
     requireCompliance,

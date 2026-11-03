@@ -29,6 +29,7 @@ vi.mock('sonner', () => ({
 vi.mock('../utils/csrfToken', () => ({
   getCSRFToken: vi.fn().mockResolvedValue('csrf-token'),
 }));
+vi.mock('../utils/guestSession', () => ({ getGuestSessionHeaders: vi.fn().mockResolvedValue({}) }));
 
 const LEGACY_CLAIMS = [
   'All Risk Claim',

@@ -13,10 +13,12 @@ import {
   ErrorCode, 
   withRetry 
 } from '../utils/geminiErrorHandling';
-import { 
-  DocumentValidator, 
-  sanitizeExtractedData 
+import {
+  DocumentValidator,
+  sanitizeExtractedData
 } from '../utils/geminiDocumentValidation';
+import { auth } from '../firebase/config';
+import { getGuestSessionHeaders } from '../utils/guestSession';
 
 interface DocumentAIRequest {
   document: {
@@ -273,10 +275,13 @@ export class DocumentAIOCREngine {
     }, 30000);
 
     try {
+      const user = auth.currentUser;
+      const idToken = user ? await user.getIdToken().catch(() => null) : null;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : await getGuestSessionHeaders()),
         },
         body: JSON.stringify(request),
         signal: controller.signal
@@ -303,7 +308,8 @@ export class DocumentAIOCREngine {
           errorMessage = errorData.message || 'Document verification is temporarily unavailable. Please try again later.';
         }
 
-        if (response.status === 429 || response.status >= 500) {
+        // A 429 is a limit, not a blip: retrying within the hour only spends more of it.
+        if (response.status >= 500) {
           throw new DocumentAITransientError(errorMessage, response.status);
         }
         throw new Error(errorMessage);

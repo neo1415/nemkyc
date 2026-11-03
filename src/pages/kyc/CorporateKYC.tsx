@@ -316,7 +316,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: false
+    requireAuth: true // guests get a match-only check at submit; registry data is never sent to them
   });
 
   // Initialize real-time verification validation
@@ -342,7 +342,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: false,
+    requireAuth: true, // guests get a match-only check at submit; registry data is never sent to them
     fieldPrefix: 'directors.0.'
   });
   
@@ -368,7 +368,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: false,
+    requireAuth: true, // guests get a match-only check at submit; registry data is never sent to them
     fieldPrefix: 'directors.1.'
   });
   
@@ -394,7 +394,7 @@ const CorporateKYC: React.FC = () => {
     userName: user?.name || undefined,
     userEmail: user?.email || undefined,
     reactHookFormSetValue: formMethods.setValue,
-    requireAuth: false,
+    requireAuth: true, // guests get a match-only check at submit; registry data is never sent to them
     fieldPrefix: 'directors.2.'
   });
   

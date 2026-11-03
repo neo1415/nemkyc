@@ -361,6 +361,72 @@ describe('account-bound customer submission flow', () => {
     },
   );
 
+  const individualCdd = {
+    NINNumber: '12345678901', firstName: 'Ada', lastName: 'Okafor', dateOfBirth: '1990-05-15', gender: 'Female',
+    ...verifiedDocumentState(['identification']),
+  };
+
+  it('sends what the customer typed and relies on the server verdict (no registry data needed)', async () => {
+    authenticate();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(successResponse({ status: true, match: { matches: true, mismatches: [], warnings: [] } }))
+      .mockResolvedValueOnce(successResponse({ csrfToken: 'csrf-token' }))
+      .mockResolvedValueOnce(successResponse({ success: true, ticketId: 'ICD-1' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
+    await act(async () => { await result.current.handleSubmit({ ...individualCdd }); });
+    await act(async () => { await result.current.confirmSubmit(); });
+
+    const checkBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(checkBody.match).toEqual({ firstName: 'Ada', lastName: 'Okafor', dateOfBirth: '1990-05-15', gender: 'Female' });
+    const submitted = JSON.parse(fetchMock.mock.calls[2][1].body).formData;
+    expect(submitted.verified).toBe(true);
+    expect(submitted.verificationData).toBeUndefined();
+    expect(result.current.showSuccess).toBe(true);
+  });
+
+  it('stops on a server-reported mismatch and submits nothing', async () => {
+    authenticate();
+    const fetchMock = vi.fn().mockResolvedValueOnce(successResponse({
+      status: true,
+      match: { matches: false, mismatches: ['The first name you entered does not match'], warnings: [] },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
+    await act(async () => { await result.current.handleSubmit({ ...individualCdd }); });
+    await act(async () => { await result.current.confirmSubmit(); });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.showVerificationMismatch).toBe(true);
+    expect(result.current.showSuccess).toBe(false);
+  });
+
+  it.each([
+    ['a provider outage', { ok: false, status: 502, json: async () => ({ status: false }) }],
+    ['a rate limit', { ok: false, status: 429, json: async () => ({ code: 'RATE_LIMITED' }) }],
+  ])('still saves the submission, flagged for review, after %s', async (_label, failedCheck) => {
+    authenticate();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(failedCheck)
+      .mockResolvedValueOnce(successResponse({ csrfToken: 'csrf-token' }))
+      .mockResolvedValueOnce(successResponse({ success: true, ticketId: 'ICD-2' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useEnhancedFormSubmit({ formType: 'Individual CDD' }));
+    await act(async () => { await result.current.handleSubmit({ ...individualCdd }); });
+    await act(async () => { await result.current.confirmSubmit(); });
+
+    expect(fetchMock.mock.calls[2][0]).toContain('/api/submit-form');
+    const submitted = JSON.parse(fetchMock.mock.calls[2][1].body).formData;
+    expect(submitted.reviewRequired).toBe(true);
+    expect(submitted.verified).toBe(false);
+    expect(submitted.reviewReasons.join(' ')).toMatch(/NIN check not completed/);
+    expect(result.current.showError).toBe(false);
+    expect(result.current.showSuccess).toBe(true);
+  });
+
   it('verifies and matches NIN data before an authenticated Individual KYC submission', async () => {
     testState.user = {
       uid: 'firebase-user-123', email: 'ada@example.com', displayName: 'Ada Okafor'

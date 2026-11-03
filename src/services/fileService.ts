@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/constants';
 import { isAllowedFile } from '@/config/filePolicy';
 import { CSRF_UNAVAILABLE_MESSAGE, getCSRFToken } from '@/utils/csrfToken';
+import { getGuestSessionHeaders } from '@/utils/guestSession';
 
 const isCsrfRejection = (response: Response, result: Record<string, unknown>) => {
   const detail = `${result.code ?? ''} ${result.error ?? ''} ${result.message ?? ''}`.toLowerCase();
@@ -19,11 +20,13 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
     formData.append('path', path);
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      const csrfToken = await getCSRFToken();
+      // The backend no longer requires the CSRF cookie here (Safari/iOS block it cross-site);
+      // the token is still sent so an older backend keeps accepting the upload.
+      const csrfToken = await getCSRFToken().catch(() => '');
       const response = await fetch(`${API_BASE_URL}/api/public/upload`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'CSRF-Token': csrfToken },
+        headers: { ...(csrfToken ? { 'CSRF-Token': csrfToken } : {}), ...(await getGuestSessionHeaders()) },
         body: formData,
       });
       const result = await response.json().catch(() => ({})) as Record<string, unknown>;

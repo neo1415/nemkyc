@@ -62,7 +62,7 @@ const {
 
 // Import Datapro NIN verification client
 const {
-  verifyNIN: dataproVerifyNIN,
+  verifyNIN: realDataproVerifyNIN,
   matchFields: dataproMatchFields,
   getUserFriendlyError: dataproGetUserFriendlyError,
   getTechnicalError: dataproGetTechnicalError
@@ -70,11 +70,19 @@ const {
 
 // Import VerifyData CAC verification client
 const {
-  verifyCAC: verifydataVerifyCAC,
+  verifyCAC: realVerifydataVerifyCAC,
   matchCACFields: verifydataMatchCACFields,
   getUserFriendlyError: verifydataGetUserFriendlyError,
   getTechnicalError: verifydataGetTechnicalError
 } = require('./server-services/verifydataClient.cjs');
+
+// MOCK_IDENTITY_PROVIDERS=true swaps both lookups for fictional test records (local/staging only).
+const mockIdentityProviders = require('./src/lib/mockIdentityProviders.cjs');
+const {
+  verifyNIN: dataproVerifyNIN,
+  verifyCAC: verifydataVerifyCAC,
+} = mockIdentityProviders.selectProviders({ verifyNIN: realDataproVerifyNIN, verifyCAC: realVerifydataVerifyCAC });
+mockIdentityProviders.announce();
 
 // Import rate limiter
 const {
@@ -914,6 +922,7 @@ const {
   requireAdmin,
   requireAuth,
   requireAuthOrGuest,
+  optionalAuth,
   requireBrokerOrAdmin,
   requireClaims,
   requireCompliance,
@@ -1699,7 +1708,13 @@ app.use((req, res, next) => {
     && req.body && typeof req.body.guest === 'object' && req.body.guest !== null;
 
   // Skip CSRF protection for specific routes including exchange-token
-  if (isPublicAuditEvent || hasBearerAuth || isGuestSubmission ||
+  // The public upload and guest-session endpoints never read a cookie or token, so there is no
+  // ambient credential for a cross-site page to ride on; the cookie check only broke uploads in
+  // browsers that block third-party cookies (Safari/iOS, Brave).
+  const isCredentialFreePublicEndpoint = req.method === 'POST'
+    && (req.path === '/api/public/upload' || req.path === '/api/public/guest-session');
+
+  if (isPublicAuditEvent || hasBearerAuth || isGuestSubmission || isCredentialFreePublicEndpoint ||
     req.path === '/api/logout' ||
     req.path === '/listenForUpdates' ||
     req.path === '/csrf-token' ||
@@ -2028,6 +2043,14 @@ const {
 // ============= END MOVED HELPERS =============
 
 // ============= SHARED CONTEXT FOR EXTRACTED ROUTE MODULES =============
+// Abuse protection for the no-account customer journey (limits, match-only checks, Turnstile).
+const guestProtection = require('./src/middleware/guestProtection.cjs').createGuestProtection({
+  rateLimit,
+  secret: process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex'),
+  logVerificationAttempt,
+});
+app.post('/api/public/guest-session', publicFormSubmissionLimiter, guestProtection.guestSessionHandler);
+
 // Handles and helpers handed to every src/routes/*.cjs module (see REFACTOR.md).
 // Built once; modules only read from it. `transporter` is exposed through a getter because it is a
 // `let` assigned later in this file (email configuration); every module registers after that point.
@@ -2066,6 +2089,8 @@ const ctx = {
   requireBrokerOrAdmin,
   requireOwnerOrAdmin,
   requireAuthOrGuest,
+  optionalAuth,
+  guestProtection,
   canAccessIdentityList,
   normalizeRole,
   isSuperAdmin,
