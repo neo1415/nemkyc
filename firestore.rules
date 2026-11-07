@@ -146,123 +146,115 @@ service cloud.firestore {
 
     match /partners-kyc/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /individual-kyc/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /individual-kyc-forms/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /Individual-kyc-form/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser() && 
-                      (request.resource.data.formType == 'kyc' || 
-                       request.resource.data.formType == 'legacy');
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc-form/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser() && 
-                      (request.resource.data.formType == 'kyc' || 
-                       request.resource.data.formType == 'legacy');
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /corporate-kyc-forms/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /agents-kyc/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     // NFIU Forms - Individual
     match /individual-nfiu-form/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser() && 
-                      request.resource.data.formType == 'nfiu' &&
-                      request.resource.data.formVariant == 'individual';
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     // NFIU Forms - Corporate
     match /corporate-nfiu-form/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser() && 
-                      request.resource.data.formType == 'nfiu' &&
-                      request.resource.data.formVariant == 'corporate';
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /brokers-kyc/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /naicom-partners-cdd/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /naicom-corporate-cdd/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /brokers-cdd/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /agentsCDD/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /partnersCDD/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isAdminOrCompliance() || (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
@@ -271,180 +263,160 @@ service cloud.firestore {
     match /motor-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /public-liability-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /rent-assurance-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /professional-indemnity-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /employers-liability-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /goods-in-transit-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fire-special-perils-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /group-personal-accident-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /combined-gpa-employers-liability-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /burglary-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /all-risk-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /money-insurance-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fidelity-guarantee-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
     
     match /contractors-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /smart-motorist-protection-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /smart-students-protection-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /smart-traveller-protection-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /smart-artisan-protection-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /smart-generation-z-protection-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /nem-home-protection-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
@@ -453,54 +425,48 @@ service cloud.firestore {
     match /livestock-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /farm-property-produce-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /poultry-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fishery-fish-farm-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /yield-index-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /multi-perils-crop-claims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
@@ -509,36 +475,32 @@ service cloud.firestore {
     match /goodsInTransitClaims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fireAndSpecialPerilsClaims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /groupPersonalAccidentClaims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 
     match /fidelityGuaranteeClaims/{docId} {
       allow read: if isClaimsOrAdminOrCompliance() || 
         (isAuthenticatedUser() && isOwner());
-      allow create: if isAuthenticatedUser();
-      allow update: if isClaimsOrAdminOrCompliance() || 
-        (isAuthenticatedUser() && isOwner());
+      allow create: if false;
+      allow update: if isClaimsOrAdminOrCompliance();
       allow delete: if isAdminOrSuperAdmin();
     }
 

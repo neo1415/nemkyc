@@ -5,6 +5,7 @@ import type { GuestIdentity } from '../components/auth/GuestIdentityDialog';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getCSRFToken } from '../utils/csrfToken';
+import { getGuestSessionHeaders } from '../utils/guestSession';
 import { secureStorageRemove } from '../utils/secureStorage';
 import {
   describeReattachFields,
@@ -108,6 +109,7 @@ const makeAuthenticatedRequest = async (url: string, data: any, method: string =
     'x-request-id': idempotencyKey,
   };
   if (firebaseUser) headers.Authorization = `Bearer ${await firebaseUser.getIdToken()}`;
+  else Object.assign(headers, await getGuestSessionHeaders());
 
   return fetch(url, {
     method,

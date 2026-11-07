@@ -481,15 +481,11 @@ app.post('/api/register', validateUserRegistration, async (req, res) => {
   try {
     const { email, password, displayName, role = 'user', dateOfBirth, userType } = req.body;
 
-    // Determine the actual role based on userType
-    // If userType is 'broker', set role to 'broker'
-    // If userType is 'regular' or undefined/empty, set role to 'default'
-    let actualRole = 'default'; // Default role for regular users
-    if (userType === 'broker') {
-      actualRole = 'broker';
-    } else if (userType === 'regular' || !userType) {
-      actualRole = 'default';
-    }
+    // Self-registration always yields the default role. The broker role unlocks identity lists,
+    // paid bulk verification, NEM-branded outreach email and every company's CAC files, so a
+    // broker sign-up is recorded as a request that an admin grants from user management.
+    const actualRole = 'default';
+    const brokerRequested = userType === 'broker';
 
     // Create user in Firebase Auth
     const userRecord = await admin.auth().createUser({
@@ -507,7 +503,10 @@ app.post('/api/register', validateUserRegistration, async (req, res) => {
       name: displayName,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
-    
+    if (brokerRequested) {
+      userRoleData.brokerRequest = { status: 'pending', requestedAt: admin.firestore.FieldValue.serverTimestamp() };
+    }
+
     // Add date of birth if provided
     if (dateOfBirth) {
       userRoleData.dateOfBirth = dateOfBirth;
@@ -552,6 +551,7 @@ app.post('/api/register', validateUserRegistration, async (req, res) => {
     res.status(201).json({ 
       success: true,
       message: 'User registered successfully',
+      brokerApprovalPending: brokerRequested,
       user: {
         uid: userRecord.uid,
         email: userRecord.email,

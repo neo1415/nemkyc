@@ -84,6 +84,7 @@ const corsOptions = {
   allowedHeaders: [
     'Content-Type',
     'CSRF-Token',
+    'x-guest-session',
     'X-Requested-With',
     'Authorization',
     'Accept',

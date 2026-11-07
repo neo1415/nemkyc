@@ -40,29 +40,29 @@ export const verificationConfig: VerificationConfig = {
   // Endpoint: /verifynin/?regNo={NIN}
   // Authentication: SERVICEID header
   dataproApiUrl: import.meta.env.VITE_DATAPRO_API_URL || 'https://api.datapronigeria.com',
-  dataproServiceId: import.meta.env.VITE_DATAPRO_SERVICE_ID || '',
+  dataproServiceId: '', // server-only secret: never read from VITE_ env (it would ship in the bundle)
   
   // VerifyData API Configuration (CAC verification)
   // Base URL: https://vd.villextra.com
   // Endpoint: /api/v1/cac/verify
   // Authentication: secret-key header
   verifydataApiUrl: import.meta.env.VITE_VERIFYDATA_API_URL || 'https://vd.villextra.com',
-  verifydataSecretKey: import.meta.env.VITE_VERIFYDATA_SECRET_KEY || '',
+  verifydataSecretKey: '', // server-only secret
   
   // Paystack API Configuration (legacy NIN/BVN verification)
   // TODO: Add real API URL and key when ready
   ninBvnApiUrl: import.meta.env.VITE_NIN_BVN_API_URL || 'https://api.paystack.co/identity',
-  ninBvnApiKey: import.meta.env.VITE_NIN_BVN_API_KEY || '',
+  ninBvnApiKey: '', // server-only secret
   
   // CAC API Configuration (legacy)
   // TODO: Add real API URL and key when ready
   cacApiUrl: import.meta.env.VITE_CAC_API_URL || '',
-  cacApiKey: import.meta.env.VITE_CAC_API_KEY || '',
+  cacApiKey: '', // server-only secret
   
   // Termii API Configuration (for WhatsApp/SMS notifications)
   // TODO: Add real API URL and key when ready
   termiiApiUrl: import.meta.env.VITE_TERMII_API_URL || 'https://api.ng.termii.com/api',
-  termiiApiKey: import.meta.env.VITE_TERMII_API_KEY || '',
+  termiiApiKey: '', // server-only secret
 };
 
 /**

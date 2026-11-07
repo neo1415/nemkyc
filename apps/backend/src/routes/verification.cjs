@@ -16,6 +16,10 @@ module.exports = function register(app, ctx) {
     hashForCacheLookup,
     logVerificationAttempt,
     logVerificationComplete,
+    guestProtection,
+    optionalAuth,
+    requireAdmin,
+    requireAuth,
     verificationRateLimiter,
     verifydataGetUserFriendlyError,
     verifydataVerifyCAC,
@@ -24,7 +28,8 @@ module.exports = function register(app, ctx) {
 // ============= CAC VERIFICATION PROXY =============
 
 // CAC Verification Proxy
-app.post('/api/verify/cac', verificationRateLimiter, async (req, res) => {
+// Demo/diagnostic lookup used by the admin demo page: staff only, since it returns registry data.
+app.post('/api/verify/cac', requireAuth, requireAdmin, verificationRateLimiter, async (req, res) => {
   try {
     const { rc_number, company_name, secretKey } = req.body;
     const demoMode = process.env.NODE_ENV !== 'production' && req.body.demoMode === true;
@@ -227,7 +232,15 @@ function getVerificationFailureStatus(errorCode) {
 }
 
 // NIN Auto-Fill Verification with Database Caching
-app.post('/api/autofill/verify-nin', verificationRateLimiter, async (req, res) => {
+// Guests: match-only (registry data never returned), per-IP/per-NIN/daily limits, optional human check.
+app.post('/api/autofill/verify-nin',
+  optionalAuth,
+  guestProtection.requireHumanCheck,
+  guestProtection.identityMatchResponse('NIN'),
+  guestProtection.identityLookupLimiter,
+  guestProtection.perIdentityLimiter('nin'),
+  guestProtection.guestDailyCap,
+  async (req, res) => {
   try {
     const { nin, userId, formId, userName, userEmail } = req.body;
     
@@ -451,7 +464,14 @@ app.post('/api/autofill/verify-nin', verificationRateLimiter, async (req, res) =
 });
 
 // CAC Auto-Fill Verification with Database Caching
-app.post('/api/autofill/verify-cac', verificationRateLimiter, async (req, res) => {
+app.post('/api/autofill/verify-cac',
+  optionalAuth,
+  guestProtection.requireHumanCheck,
+  guestProtection.identityMatchResponse('CAC'),
+  guestProtection.identityLookupLimiter,
+  guestProtection.perIdentityLimiter('rc_number'),
+  guestProtection.guestDailyCap,
+  async (req, res) => {
   try {
     const { rc_number, userId, formId, userName, userEmail } = req.body;
     

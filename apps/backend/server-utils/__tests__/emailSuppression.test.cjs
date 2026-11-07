@@ -2,7 +2,13 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { wrapTransport, isSuppressed, parsePatterns, toAddressList } = require('../../src/lib/emailSuppression.cjs');
+const {
+  DEFAULT_ALLOWLIST, wrapTransport, isSuppressed, parseAllowlist, parsePatterns, toAddressList,
+} = require('../../src/lib/emailSuppression.cjs');
+
+// The suppression tests below are about the pattern switch alone; the allow-list (closed by
+// default) is turned off for them and exercised explicitly at the end of the file.
+process.env.EMAIL_ALLOWLIST = 'off';
 
 function fakeTransport() {
   const sent = [];
@@ -95,4 +101,38 @@ test('the customer still gets their mail while staff are suppressed', async () =
 
   assert.equal(transport.sent.length, 1);
   assert.equal(transport.sent[0].to, 'tester@gmail.com');
+});
+
+test('the allow-list is closed by default: only the tester receives mail', async () => {
+  assert.equal(DEFAULT_ALLOWLIST, 'adedaniel502@gmail.com');
+  const transport = fakeTransport();
+  const wrapped = wrapTransport(transport, '', ''); // '' = not configured in Railway
+
+  const toCustomer = await quiet(() => wrapped.sendMail({ to: 'customer@yahoo.com', subject: 'Confirmation' }));
+  await quiet(() => wrapped.sendMail({
+    to: 'Ade Daniel <AdeDaniel502@Gmail.com>, kyc@nem-insurance.com',
+    bcc: ['compliance@nem-insurance.com'],
+    subject: 'New submission',
+  }));
+
+  assert.equal(toCustomer.suppressed, true);
+  assert.equal(transport.sent.length, 1);
+  assert.equal(transport.sent[0].to, 'Ade Daniel <AdeDaniel502@Gmail.com>');
+  assert.equal(transport.sent[0].bcc, undefined);
+});
+
+test('an empty EMAIL_ALLOWLIST stays closed; only "off" restores normal delivery', () => {
+  assert.deepEqual(parseAllowlist(''), ['adedaniel502@gmail.com']);
+  assert.deepEqual(parseAllowlist('  '), ['adedaniel502@gmail.com']);
+  assert.deepEqual(parseAllowlist('A@x.com, b@y.com'), ['a@x.com', 'b@y.com']);
+  assert.deepEqual(parseAllowlist('OFF'), []);
+  const transport = fakeTransport();
+  assert.equal(wrapTransport(transport, '', 'off'), transport);
+});
+
+test('the allow-list and the suppression pattern combine', async () => {
+  const transport = fakeTransport();
+  const wrapped = wrapTransport(transport, 'gmail', 'a@gmail.com,b@yahoo.com');
+  await quiet(() => wrapped.sendMail({ to: 'a@gmail.com, b@yahoo.com, c@yahoo.com', subject: 'x' }));
+  assert.equal(transport.sent[0].to, 'b@yahoo.com');
 });

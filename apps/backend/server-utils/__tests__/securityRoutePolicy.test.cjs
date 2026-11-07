@@ -115,8 +115,12 @@ test('customer submissions are account-bound by server-derived identity', () => 
 });
 
 test('costly and upload endpoints are rate limited', () => {
-  assert.ok(source.includes("app.post('/api/document-ai/process', verificationRateLimiter"));
-  assert.ok(source.includes("app.post('/api/verify/cac', verificationRateLimiter"));
+  assert.match(source, /app\.post\('\/api\/document-ai\/process',\s*optionalAuth,\s*guestProtection\.requireHumanCheck,\s*guestProtection\.documentReadLimiter/);
+  assert.ok(source.includes("app.post('/api/verify/cac', requireAuth, requireAdmin, verificationRateLimiter"));
+  for (const [route, field] of [['verify-nin', 'nin'], ['verify-cac', 'rc_number']]) {
+    const pattern = new RegExp(`app\\.post\\('/api/autofill/${route}',\\s*optionalAuth,\\s*guestProtection\\.requireHumanCheck,\\s*guestProtection\\.identityMatchResponse\\('(NIN|CAC)'\\),\\s*guestProtection\\.identityLookupLimiter,\\s*guestProtection\\.perIdentityLimiter\\('${field}'\\),\\s*guestProtection\\.guestDailyCap`);
+    assert.match(source, pattern, route);
+  }
   assert.ok(source.includes("app.post('/api/public/upload', publicUploadLimiter"));
   assert.ok(source.includes("app.post('/api/submit-form', publicFormSubmissionLimiter, guestProvisionLimiter, requireAuthOrGuest"));
   assert.ok(source.includes("upload.single('file')"));

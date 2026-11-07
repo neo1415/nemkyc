@@ -2,13 +2,19 @@
 
 module.exports = function register(app, ctx) {
   const {
-    verificationRateLimiter,
+    guestProtection,
+    optionalAuth,
   } = ctx;
 
 // The Gemini proxy that used to live here was removed: verification runs on Document AI only.
 
 // ============= DOCUMENT AI API ENDPOINT =============
-app.post('/api/document-ai/process', verificationRateLimiter, async (req, res) => {
+// Paid Google call: per-IP (guests) or per-user limits, plus the optional human check.
+app.post('/api/document-ai/process',
+  optionalAuth,
+  guestProtection.requireHumanCheck,
+  guestProtection.documentReadLimiter,
+  async (req, res) => {
   console.log('📄 [DOCUMENT AI] Endpoint hit! Method:', req.method, 'Path:', req.path);
   console.log('📄 [DOCUMENT AI] Body keys:', Object.keys(req.body || {}));
   

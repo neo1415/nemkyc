@@ -15,12 +15,12 @@ const rateLimit = require('express-rate-limit');
  * Prevents abuse of verification APIs
  * 
  * Limits:
- * - 10 requests per 15 minutes per IP
+ * - 30 requests per 15 minutes per IP
  * - Stricter than general API rate limits
  */
 const verificationRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per windowMs
+  max: 30, // per IP, every request counted; mobile carriers put many customers behind one address
   message: {
     error: 'Too many verification attempts',
     message: 'You have exceeded the maximum number of verification attempts. Please try again later.',
@@ -28,14 +28,10 @@ const verificationRateLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  // Use IP address for rate limiting
-  keyGenerator: (req) => {
-    // Use X-Forwarded-For if behind proxy, otherwise use req.ip
-    return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip;
-  },
-  // Only failed verification attempts count toward the limit.
-  // `skip` runs before the response and therefore cannot inspect the final status code.
-  skipSuccessfulRequests: true,
+  // req.ip is resolved through the trusted proxy hop ('trust proxy' = 1). The leftmost
+  // X-Forwarded-For entry is whatever the client sent, so keying on it let anyone pick a fresh key
+  // per request. Every request counts: successful lookups are the ones that cost money.
+  keyGenerator: (req) => req.ip,
   handler: (req, res) => {
     console.warn(`⚠️  Rate limit exceeded for IP: ${req.ip} on ${req.path}`);
     res.status(429).json({
