@@ -533,13 +533,33 @@ async function provisionGuestAccount(guest, req) {
  */
 async function buildSetPasswordLink(email) {
   const frontendUrl = process.env.FRONTEND_URL || 'https://nemforms.com';
+  // accountSetup=1 tells the set-password page this is a new account, so it also asks for the
+  // date of birth (an ordinary forgot-password reset does not).
   return admin.auth().generatePasswordResetLink(email, {
-    url: `${frontendUrl}/dashboard`,
+    url: `${frontendUrl}/dashboard?accountSetup=1`,
     handleCodeInApp: false
   });
 }
 
 const ALLOWED_PUBLIC_UPLOAD_ROOTS = customerUploadRoots(getAllClaimCollections);
+
+// Lets the submit dialog ask for the email first and then either the password (existing account)
+// or the name (new account). /api/submit-form already answers 409 ACCOUNT_EXISTS for the same
+// question, so this discloses nothing new; it carries the same per-IP limit and human check.
+app.post('/api/public/account-status', guestProvisionLimiter, guestProtection.requireHumanCheck, async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+  try {
+    await admin.auth().getUserByEmail(email);
+    return res.json({ exists: true });
+  } catch (error) {
+    if (error.code === 'auth/user-not-found') return res.json({ exists: false });
+    console.error('Account status lookup failed:', error.message);
+    return res.status(503).json({ error: 'We could not check this email right now.' });
+  }
+});
 
 // Upload customer documents through the backend so Firebase Storage can deny
 // anonymous writes. Return an internal gs:// reference instead of issuing a

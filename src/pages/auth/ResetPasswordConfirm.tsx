@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
-import { auth } from '../../firebase/config';
+import { confirmPasswordReset, signInWithEmailAndPassword, verifyPasswordResetCode } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebase/config';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { PasswordInput } from '../../components/common/PasswordInput';
@@ -12,6 +13,19 @@ import { Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { validatePasswordStrength } from '../../utils/passwordValidation';
 import logoImage from '../../assets/NEMs-Logo.jpg';
+
+/** Returns an error message, or null for a valid date of someone aged 18 or over. */
+export const validateDateOfBirth = (value: string): string | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return 'Enter your date of birth';
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  if (today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day)) age--;
+  if (year < 1900 || age > 120) return 'Enter a valid date of birth';
+  if (age < 18) return 'You must be at least 18 years old';
+  return null;
+};
 
 const ResetPasswordConfirm: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -26,6 +40,10 @@ const ResetPasswordConfirm: React.FC = () => {
   const [codeValid, setCodeValid] = useState(false);
 
   const oobCode = searchParams.get('oobCode');
+  // Accounts created from a guest submission arrive with accountSetup=1 in the continue URL: they
+  // also give their date of birth here (ordinary forgot-password resets do not).
+  const isAccountSetup = (searchParams.get('continueUrl') || '').includes('accountSetup=1');
+  const [dateOfBirth, setDateOfBirth] = useState('');
 
   useEffect(() => {
     const verifyCode = async () => {
@@ -69,6 +87,14 @@ const ResetPasswordConfirm: React.FC = () => {
       return;
     }
 
+    if (isAccountSetup) {
+      const ageError = validateDateOfBirth(dateOfBirth);
+      if (ageError) {
+        setError(ageError);
+        return;
+      }
+    }
+
     if (!oobCode) {
       setError('Invalid reset code');
       return;
@@ -78,6 +104,26 @@ const ResetPasswordConfirm: React.FC = () => {
 
     try {
       await confirmPasswordReset(auth, oobCode, newPassword);
+
+      if (isAccountSetup) {
+        // Sign in with the new password and store the date of birth on the profile. The password is
+        // already set at this point, so a failure here must not look like the reset failed.
+        try {
+          const { user } = await signInWithEmailAndPassword(auth, email, newPassword);
+          await Promise.all([
+            updateDoc(doc(db, 'userroles', user.uid), { dateOfBirth }),
+            updateDoc(doc(db, 'users', user.uid), { dateOfBirth }),
+          ]);
+        } catch (profileError) {
+          console.error('Saving date of birth after account setup failed:', profileError);
+          toast.warning('Your password is set. Please add your date of birth from your profile.');
+        }
+        setSuccess(true);
+        toast.success('Your account is ready');
+        setTimeout(() => navigate('/dashboard'), 1500);
+        return;
+      }
+
       setSuccess(true);
       toast.success('Password reset successful!');
       setTimeout(() => {
@@ -161,9 +207,13 @@ const ResetPasswordConfirm: React.FC = () => {
               className="w-12 h-12 object-contain rounded"
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Set New Password</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            {isAccountSetup ? 'Set Up Your Account' : 'Set New Password'}
+          </CardTitle>
           <CardDescription className="text-center">
-            Enter your new password for {email}
+            {isAccountSetup
+              ? `Choose a password and confirm your date of birth for ${email}`
+              : `Enter your new password for ${email}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -172,7 +222,9 @@ const ResetPasswordConfirm: React.FC = () => {
               <Alert className="border-green-500 bg-green-50">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Password reset successful! Redirecting to sign in...
+                  {isAccountSetup
+                    ? 'Your account is ready! Taking you to your dashboard...'
+                    : 'Password reset successful! Redirecting to sign in...'}
                 </AlertDescription>
               </Alert>
             </div>
@@ -185,6 +237,22 @@ const ResetPasswordConfirm: React.FC = () => {
               )}
               
               <form onSubmit={handleSubmit} className="space-y-4">
+                {isAccountSetup && (
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    {/* A native date input yields 'YYYY-MM-DD' with no time zone involved. */}
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={dateOfBirth}
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">You must be at least 18 years old</p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">New Password</Label>
                   <PasswordInput

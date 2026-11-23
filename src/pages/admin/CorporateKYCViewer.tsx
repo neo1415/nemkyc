@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, FileText, Building2, Users, CreditCard, FileCheck } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { downloadSubmissionDocument } from '@/services/secureDocumentService';
 
 interface CorporateKYCViewerProps {
   data: any;
@@ -130,6 +131,7 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
   };
 
   const directors = extractDirectorsData(data);
+  const documentField = data.cacDocument ? 'cacDocument' : data.verificationDoc ? 'verificationDoc' : null;
 
   const downloadPDF = async () => {
     const element = document.getElementById('corporate-kyc-pdf-content');
@@ -291,18 +293,23 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                 <p className="font-medium text-sm text-muted-foreground">Date of Incorporation</p>
                 <p className="font-medium">{formatDate(data.dateOfIncorporationRegistration)}</p>
               </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
-                <p className="font-medium">{formatValue(data.BVNNumber)}</p>
-              </div>
+              {/* BVN and Tax ID moved to Corporate NFIU in March 2026; shown only on older submissions. */}
+              {data.BVNNumber && (
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
+                  <p className="font-medium">{formatValue(data.BVNNumber)}</p>
+                </div>
+              )}
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Contact Person Mobile</p>
                 <p className="font-medium">{formatValue(data.contactPersonNo)}</p>
               </div>
-              <div>
-                <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
-                <p className="font-medium">{formatValue(data.taxIDNo)}</p>
-              </div>
+              {data.taxIDNo && (
+                <div>
+                  <p className="font-medium text-sm text-muted-foreground">Tax ID Number</p>
+                  <p className="font-medium">{formatValue(data.taxIDNo)}</p>
+                </div>
+              )}
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Email Address</p>
                 <p className="font-medium">{formatValue(data.emailAddress)}</p>
@@ -375,10 +382,12 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
                         <p className="font-medium text-sm text-muted-foreground">Phone Number</p>
                         <p className="font-medium">{formatValue(director.phoneNumber)}</p>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
-                        <p className="font-medium">{formatValue(director.BVNNumber)}</p>
-                      </div>
+                      {director.BVNNumber && (
+                        <div>
+                          <p className="font-medium text-sm text-muted-foreground">BVN Number</p>
+                          <p className="font-medium">{formatValue(director.BVNNumber)}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="font-medium text-sm text-muted-foreground">NIN Number</p>
                         <p className="font-medium">{formatValue(director.NINNumber)}</p>
@@ -432,24 +441,28 @@ const CorporateKYCViewer: React.FC<CorporateKYCViewerProps> = ({ data, onClose }
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {data.companyNameVerificationDoc && (
+              <div>
+                <p className="font-medium text-sm text-muted-foreground">Document Type</p>
+                <p className="font-medium">{formatValue(data.companyNameVerificationDoc)}</p>
+              </div>
+            )}
             <div>
-              <p className="font-medium text-sm text-muted-foreground">Document Type</p>
-              <p className="font-medium">{formatValue(data.companyNameVerificationDoc)}</p>
-            </div>
-            <div>
-              <p className="font-medium text-sm text-muted-foreground">Verification Document</p>
-              {data.verificationDoc ? (
-                <a 
-                  href={data.verificationDoc} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+              <p className="font-medium text-sm text-muted-foreground">CAC Certificate</p>
+              {/* The form saves the certificate as `cacDocument` (a private gs:// reference since the
+                  backend upload change); `verificationDoc` is the pre-2026 field name. */}
+              {documentField && data.id ? (
+                <button
+                  type="button"
+                  onClick={() => downloadSubmissionDocument('corporate-kyc-form', data.id, documentField, 'CAC-certificate')
+                    .catch((error: Error) => window.alert(error.message))}
                   className="text-primary hover:underline flex items-center gap-2"
                 >
                   <FileText className="h-4 w-4" />
-                  View Document
-                </a>
+                  Download Document
+                </button>
               ) : (
-                <p className="text-muted-foreground">{formatValue(data.verificationDoc, true)}</p>
+                <p className="text-muted-foreground">Document not uploaded</p>
               )}
             </div>
           </CardContent>

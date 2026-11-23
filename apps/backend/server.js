@@ -1712,7 +1712,7 @@ app.use((req, res, next) => {
   // ambient credential for a cross-site page to ride on; the cookie check only broke uploads in
   // browsers that block third-party cookies (Safari/iOS, Brave).
   const isCredentialFreePublicEndpoint = req.method === 'POST'
-    && (req.path === '/api/public/upload' || req.path === '/api/public/guest-session');
+    && ['/api/public/upload', '/api/public/guest-session', '/api/public/account-status'].includes(req.path);
 
   if (isPublicAuditEvent || hasBearerAuth || isGuestSubmission || isCredentialFreePublicEndpoint ||
     req.path === '/api/logout' ||

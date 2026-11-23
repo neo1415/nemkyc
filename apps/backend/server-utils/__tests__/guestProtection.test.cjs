@@ -200,3 +200,13 @@ test('the same NIN cannot be enumerated by guests', async () => {
     await srv.close();
   }
 });
+
+test('a date picked in Lagos matches every registry date format (no day-early UTC shift)', () => {
+  // new Date(1990, 4, 22) at local midnight in UTC+1, as the browser serialises it.
+  const picked = '1990-05-21T23:00:00.000Z';
+  for (const registry of ['22-05-1990', '22/05/1990', '22-May-1990', '22 May 1990', '1990-05-22']) {
+    assert.equal(matchNINData({ firstName: 'Ada', lastName: 'Obi', dateOfBirth: picked }, { firstName: 'Ada', lastName: 'Obi', birthdate: registry }).matches, true, registry);
+  }
+  assert.equal(matchNINData({ firstName: 'Ada', lastName: 'Obi', dateOfBirth: picked }, { firstName: 'Ada', lastName: 'Obi', birthdate: '23-05-1990' }).matches, false);
+  assert.equal(matchNINData({ firstName: 'Ada', lastName: 'Obi', dateOfBirth: '1990-05-22' }, { firstName: 'Ada', lastName: 'Obi', birthdate: '21-05-1990' }).matches, false);
+});

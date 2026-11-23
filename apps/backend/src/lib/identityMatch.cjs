@@ -53,33 +53,52 @@ function calculateSimilarity(str1, str2) {
   return shortSimilarity * 0.7 + longSimilarity * 0.3;
 }
 
-/** Parses DD-MM-YYYY / DD/MM/YYYY first (registry format), then falls back to native parsing. */
-function parseDate(value) {
-  if (value instanceof Date) return value;
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const validDay = (year, month, day) => (year >= 1900 && year <= 2100 && month >= 1 && month <= 12
+  && day >= 1 && day <= 31 ? `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null);
+
+/**
+ * Reduces any date the form or a registry produces to a calendar day 'YYYY-MM-DD', without ever
+ * going through a time zone:
+ *   1990-05-22 / 22-05-1990 / 22/05/1990 / 22-May-1990 / 22 May 1990   (registry and form values)
+ *   1990-05-21T23:00:00.000Z   (a date picker's local midnight serialised in UTC+1)
+ * A timestamp is rounded to the nearest UTC day: local midnight anywhere from UTC-11 to UTC+12
+ * lands on the day the customer picked. Comparing in UTC without rounding made every Nigerian
+ * birthday look a day early.
+ */
+function toCalendarDay(value) {
   if (!value) return null;
+  if (value instanceof Date) value = value.toISOString();
   const str = String(value).trim();
-  const parts = str.split(/[-/]/);
-  if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900 && year <= 2100) {
-      return new Date(Date.UTC(year, month, day));
-    }
+
+  if (/\dT\d/.test(str)) {
+    const time = Date.parse(str);
+    if (isNaN(time)) return null;
+    const day = new Date(Math.round(time / DAY_MS) * DAY_MS);
+    return validDay(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate());
   }
-  const fallback = new Date(str);
-  return isNaN(fallback.getTime()) ? null : fallback;
+
+  let m = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (m) return validDay(+m[1], +m[2], +m[3]);
+  m = str.match(/^(\d{1,2})[-/ ](\d{1,2})[-/ ](\d{4})$/);
+  if (m) return validDay(+m[3], +m[2], +m[1]);
+  m = str.match(/^(\d{1,2})[-/ ]([A-Za-z]{3,})[-/ ,]*(\d{4})$/);
+  if (m) {
+    const month = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()) + 1;
+    return month ? validDay(+m[3], month, +m[1]) : null;
+  }
+  return null;
 }
 
-/** Dates equal ignoring time. Missing or unparseable values are not treated as a mismatch. */
+/** Same calendar day. Missing or unparseable values are not treated as a mismatch. */
 function datesMatch(a, b) {
   if (!a || !b) return true;
-  const d1 = parseDate(a);
-  const d2 = parseDate(b);
+  const d1 = toCalendarDay(a);
+  const d2 = toCalendarDay(b);
   if (!d1 || !d2) return true;
-  return d1.getUTCFullYear() === d2.getUTCFullYear()
-    && d1.getUTCMonth() === d2.getUTCMonth()
-    && d1.getUTCDate() === d2.getUTCDate();
+  return d1 === d2;
 }
 
 const firstString = (source, keys) => {
@@ -189,6 +208,7 @@ function matchCACData(entered = {}, verificationData = {}) {
 module.exports = {
   calculateSimilarity,
   datesMatch,
+  toCalendarDay,
   matchCACData,
   matchNINData,
   normalizeNINVerificationData,
