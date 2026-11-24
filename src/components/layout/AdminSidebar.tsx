@@ -12,7 +12,6 @@ import {
   User,
   Home,
   Shield,
-  ClipboardCheck,
   IdCard
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -60,11 +59,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       href: '/admin',
       icon: BarChart3
     },
-    ...(canViewClaims ? [{
-      name: 'Claims Queue',
-      href: '/admin/claims-queue',
-      icon: ClipboardCheck
-    }] : []),
+    // Claims Queue is hidden until it gets filters and row controls; the page and its
+    // /admin/claims-queue route still exist.
+    // ...(canViewClaims ? [{
+    //   name: 'Claims Queue',
+    //   href: '/admin/claims-queue',
+    //   icon: ClipboardCheck
+    // }] : []),
     ...(canViewUsers ? [{
       name: 'Users',
       href: '/admin/users', 
