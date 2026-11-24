@@ -37,12 +37,12 @@ describe('AdminSidebar role scoping', () => {
     authState.user = null;
   });
 
-  it('claims role sees only the claims queue and claim collections', () => {
+  it('claims role sees only the claim collections (the claims queue link is hidden)', () => {
     asUser({ role: 'claims' });
     renderSidebar();
 
-    expect(visibleSections()).toEqual(['Claims Queue', 'Claims Forms']);
-    expect(screen.getByText('Claims Queue').closest('a')).toHaveAttribute('href', '/admin/claims-queue');
+    expect(visibleSections()).toEqual(['Claims Forms']);
+    expect(screen.queryByText('Claims Queue')).not.toBeInTheDocument();
   });
 
   it('claims role scoped to a unit only sees that unit’s claim collections', () => {
@@ -65,14 +65,14 @@ describe('AdminSidebar role scoping', () => {
     asUser({ role: 'admin' });
     renderSidebar();
 
-    expect(visibleSections()).toEqual(['Claims Queue', 'Claims Forms', 'KYC Forms', 'CDD Forms', 'NFIU Forms', 'Identity Collection']);
+    expect(visibleSections()).toEqual(['Claims Forms', 'KYC Forms', 'CDD Forms', 'NFIU Forms', 'Identity Collection']);
   });
 
   it('super admin sees everything', () => {
     asUser({ role: 'super admin' });
     renderSidebar();
 
-    expect(visibleSections()).toEqual(sectionNames);
+    expect(visibleSections()).toEqual(sectionNames.filter(name => name !== 'Claims Queue'));
   });
 
   it('normalises role spelling variants', () => {

@@ -133,18 +133,28 @@ type IdentityCheckOutcome =
   // submission goes through flagged for manual review instead of being lost.
   | { kind: 'unavailable'; reason: string };
 
+/**
+ * A picked date as the calendar day the customer chose ('YYYY-MM-DD'). Date pickers hold local
+ * midnight, which serialises to the previous day in UTC for Nigerian customers.
+ */
+const calendarDay = (value: unknown) => {
+  const date = value instanceof Date ? value : typeof value === 'string' && /\dT\d/.test(value) ? new Date(value) : null;
+  if (!date || isNaN(date.getTime())) return value;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 /** What the customer typed, in the shape the backend matcher expects. */
 const enteredIdentityDetails = (formData: any, identityType: 'NIN' | 'CAC') =>
   identityType === 'NIN'
     ? {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        dateOfBirth: formData.dateOfBirth,
+        dateOfBirth: calendarDay(formData.dateOfBirth),
         gender: formData.gender,
       }
     : {
         companyName: formData.insured || formData.companyName,
-        registrationDate: formData.dateOfIncorporationRegistration || formData.incorporationDate,
+        registrationDate: calendarDay(formData.dateOfIncorporationRegistration || formData.incorporationDate),
         address: formData.officeAddress || formData.registeredCompanyAddress || formData.registeredAddress || formData.companyAddress,
       };
 

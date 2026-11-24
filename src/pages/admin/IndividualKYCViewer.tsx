@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, FileText, User, CreditCard, FileCheck } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { downloadSubmissionDocument } from '@/services/secureDocumentService';
 
 interface IndividualKYCViewerProps {
   data: any;
@@ -13,6 +14,10 @@ interface IndividualKYCViewerProps {
 }
 
 const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose }) => {
+  const openDocument = (field: string, fileName: string) =>
+    downloadSubmissionDocument('Individual-kyc-form', data.id, field, fileName)
+      .catch((error: Error) => window.alert(error.message));
+
   // Helper function to format values
   const formatValue = (value: any, isFile: boolean = false) => {
     if (!value || value === '' || value === null || value === undefined) {
@@ -370,34 +375,34 @@ const IndividualKYCViewer: React.FC<IndividualKYCViewerProps> = ({ data, onClose
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <p className="font-medium text-sm text-muted-foreground">NIN Document</p>
-                {data.identityDocument ? (
-                  <a 
-                    href={data.identityDocument} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                {/* Stored values are private gs:// references; open them through the authenticated
+                    download route rather than as links. */}
+                {data.identityDocument && data.id ? (
+                  <button
+                    type="button"
+                    onClick={() => openDocument('identityDocument', 'NIN-document')}
                     className="text-primary hover:underline flex items-center gap-2"
                   >
                     <FileText className="h-4 w-4" />
-                    View NIN Document
-                  </a>
+                    Download NIN Document
+                  </button>
                 ) : (
-                  <p className="text-muted-foreground">{formatValue(data.identityDocument, true)}</p>
+                  <p className="text-muted-foreground">Document not uploaded</p>
                 )}
               </div>
               <div>
                 <p className="font-medium text-sm text-muted-foreground">Additional Identification Document</p>
-                {data.identification ? (
-                  <a 
-                    href={data.identification} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                {data.identification && data.id ? (
+                  <button
+                    type="button"
+                    onClick={() => openDocument('identification', 'identification-document')}
                     className="text-primary hover:underline flex items-center gap-2"
                   >
                     <FileText className="h-4 w-4" />
-                    View Additional Document
-                  </a>
+                    Download Additional Document
+                  </button>
                 ) : (
-                  <p className="text-muted-foreground">{formatValue(data.identification, true)}</p>
+                  <p className="text-muted-foreground">Document not uploaded</p>
                 )}
               </div>
             </div>
